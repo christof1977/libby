@@ -4,7 +4,7 @@ import syslog
 import mysql.connector
 
 
-logging = True
+logging = False
 
 def logger(msg):
     if logging == True:
@@ -12,7 +12,7 @@ def logger(msg):
         syslog.syslog(str(msg))
 
 
-class mysqlcollect(object):
+class mysqldose(object):
     pass
 
     def __init__(self, mysqluser, mysqlpass, mysqlserv, mysqldb):
@@ -41,7 +41,26 @@ class mysqlcollect(object):
     def close(self):
         if self.mysql_success == True:
             self.cursor.close()
+            self.cnx.close()
             logger("DB Connection terminated")
+
+    def read_latest(self, parameter):
+        if self.mysql_success == True:
+            try:
+                #query = 'SELECT MAX(index), value from messwert WHERE parameter = %s LIMIT 1'
+                query ='SELECT value FROM messwert WHERE parameter = %s  ORDER BY `index` DESC LIMIT 0, 1;'
+                result = self.cursor.execute(query, (parameter,))
+                row = self.cursor.fetchall()
+                self.cnx.commit()
+                #print(result)
+                #for value in result:
+                return row[0][0]
+            except Exception as e:
+                logger("Fehler beim lesen aus der Datenbank")
+        else:
+            self.start()
+
+
 
     def write(self, now, parameter, value):
         if self.mysql_success == True:
@@ -70,7 +89,9 @@ class mysqlcollect(object):
             self.start()
 
 if __name__ == "__main__":
-    dbconn = mysqlcollect('heizung', 'heizung', 'dose.fritz.box', 'garagntest') 
+    dbconn = mysqldose('heizung', 'heizung', 'dose.fritz.box', 'heizung') 
     dbconn.start()
-    dbconn.write('2017-11-12 1:2:3', 'TerrasseTemp', 44.0)
+    #dbconn.write('2017-11-12 1:2:3', 'TerrasseTemp', 44.0)
+    result = dbconn.read_latest("WohnzimmerTemp")
+    print(result)
     dbconn.close()
