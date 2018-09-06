@@ -65,6 +65,7 @@ class mysqlcollect(object):
                 print(add)
             except Exception as e:
                 logger("Fehler beim Schreiben in die Datenbank")
+                self.stop()
                 self.start()
         else:
             self.start()
