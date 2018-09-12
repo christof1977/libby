@@ -2,7 +2,7 @@
 
 import syslog
 import mysql.connector
-
+import time
 
 logging = False
 
@@ -44,12 +44,20 @@ class mysqldose(object):
             self.cnx.close()
             logger("DB Connection terminated")
 
-    def read_latest(self, parameter):
+    def read_one(self, parameter, datetime = None):
+        # reads a single value of the messwert table
+        # parameter is the parameter to read
+        # datetime can be empty or specified like "YYYY-MM-DD HH:mm:ss"
         if self.mysql_success == True:
             try:
-                #query = 'SELECT MAX(index), value from messwert WHERE parameter = %s LIMIT 1'
-                query ='SELECT value FROM messwert WHERE parameter = %s  ORDER BY `index` DESC LIMIT 0, 1;'
-                result = self.cursor.execute(query, (parameter,))
+                if datetime == None:
+                    query ='SELECT value FROM messwert WHERE parameter = %s ORDER BY `index` DESC LIMIT 0, 1;'
+                    result = self.cursor.execute(query, (parameter,))
+                    #print("ohne datetime")
+                else:
+                    query ='SELECT value FROM messwert WHERE parameter = %s AND datetime = %s;'
+                    result = self.cursor.execute(query, (parameter, datetime))
+                    #print("mit datetime")
                 row = self.cursor.fetchall()
                 self.cnx.commit()
                 #print(result)
@@ -60,9 +68,33 @@ class mysqldose(object):
         else:
             self.start()
 
+    def calc_pwr_h(self, datetime):
+        # Calculates the collected solar ower within a given hour
+        # datetime hast to specified as follows: "2018-09-11 11%"
+        if self.mysql_success == True:
+            try:
+                query ='SELECT ROUND(SUM(value)/COUNT(value), 3) FROM messwert WHERE datetime LIKE %s AND parameter = %s;'
+                result = self.cursor.execute(query, (datetime, "OekoKollLeistung"))
+                row = self.cursor.fetchall()
+                self.cnx.commit()
+                #print("Last Query:", self.cursor._last_executed)
+                #print(result)
+                #for value in result:
+                return row[0][0]
+                #return row
+            except Exception as e:
+                #print("Last Query:", self.cursor._last_executed)
+                logger("Fehler beim lesen aus der Datenbank")
+        else:
+            self.start()
+
 
 
     def write(self, now, parameter, value):
+        # writes to the messwert table of the database
+        # now = time.strftime('%Y-%m-%d %H:%M:%S')
+        # parameter: char(50)
+        # value: float
         if self.mysql_success == True:
             #logger("Writing to DB")
             add = ("INSERT INTO messwert " 
@@ -81,7 +113,7 @@ class mysqldose(object):
                 mess_id = self.cursor.lastrowid
                 self.cnx.commit()
                 return mess_id
-                print(add)
+                #print(add)
             except Exception as e:
                 logger("Fehler beim Schreiben in die Datenbank")
                 self.stop()
@@ -89,10 +121,13 @@ class mysqldose(object):
         else:
             self.start()
 
+
+
 if __name__ == "__main__":
     dbconn = mysqldose('heizung', 'heizung', 'dose.fritz.box', 'heizung') 
     dbconn.start()
     #dbconn.write('2017-11-12 1:2:3', 'TerrasseTemp', 44.0)
-    result = dbconn.read_latest("WohnzimmerTemp")
+    #result = dbconn.read_one("OekoKollLeistung", "2018-09-12 18:42:25")
+    result = dbconn.calc_pwr_h("2018-09-12 17%")
     print(result)
     dbconn.close()
