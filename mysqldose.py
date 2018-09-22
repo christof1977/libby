@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
 import syslog
-#import mysql.connector
 import MySQLdb
 import time
-from logger import logger
-
+if __name__ == "__main__":
+    from logger import logger
+else:
+    from .logger import logger
 
 logging = True
 
@@ -21,24 +22,21 @@ class mysqldose(object):
     def start(self):
         self.mysql_success = False
         try:
-            #self.cnx = mysql.connector.connect(user=self.mysqluser, password=self.mysqlpass,host=self.mysqlserv,database=self.mysqldb)
             self.cnx = MySQLdb.connect(user=self.mysqluser, passwd=self.mysqlpass,host=self.mysqlserv,db=self.mysqldb)
-            #self.cursor = self.cnx.cursor()
             self.mysql_success = True
             logger("Database connection established", logging)
         except Exception as e:
             try:
                 self.mysql_success = False
                 logger("Database connection error: "+str(e), logging)
+                print("1: ",str(e))
                 self.cnx.disconnect()
             except Exception as e:
+                print("2: ",str(e))
                 pass
-
-
 
     def close(self):
         if self.mysql_success == True:
-            #self.cursor.close()
             self.cnx.close()
             logger("DB Connection terminated", logging)
 
