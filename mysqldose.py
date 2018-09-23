@@ -105,7 +105,7 @@ class mysqldose(object):
                 #print(add)
             except Exception as e:
                 logger("Fehler beim Schreiben in die Datenbank: "+str(e), logging)
-                self.stop()
+                self.close()
                 self.start()
         else:
             self.start()
