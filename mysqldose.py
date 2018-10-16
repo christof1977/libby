@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 import syslog
-import MySQLdb
+#import MySQLdb
+import pymysql
 import time
 if __name__ == "__main__":
     from logger import logger
@@ -22,7 +23,8 @@ class mysqldose(object):
     def start(self):
         self.mysql_success = False
         try:
-            self.cnx = MySQLdb.connect(user=self.mysqluser, passwd=self.mysqlpass,host=self.mysqlserv,db=self.mysqldb)
+            #self.cnx = MySQLdb.connect(user=self.mysqluser, passwd=self.mysqlpass,host=self.mysqlserv,db=self.mysqldb)
+            self.cnx = pymysql.connect(user=self.mysqluser, passwd=self.mysqlpass,host=self.mysqlserv,db=self.mysqldb)
             self.mysql_success = True
             logger("Database connection established", logging)
         except Exception as e:
