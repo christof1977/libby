@@ -8,7 +8,7 @@ if __name__ == "__main__":
 else:
     from .logger import logger
 
-logging = True
+logging = False
 
 class mysqldose(object):
     pass
@@ -64,9 +64,32 @@ class mysqldose(object):
 
         else:
             self.start()
+    
+    def read_many(self, parameter, datetime):
+        # reads many values of the messwert table
+        # parameter is the parameter to read
+        # datetime is speciefied as "2018-10-16%" for a whole day as example
+        if self.mysql_success == True:
+            try:
+                self.cursor = self.cnx.cursor()
+                query ='SELECT value, datetime FROM messwert WHERE parameter = %s AND datetime LIKE %s;'
+                result = self.cursor.execute(query, (parameter, datetime))
+                result = self.cursor.fetchall()
+                self.cnx.commit()
+                self.cursor.close()
+                values = [elt[0] for elt in result]
+                datetimes = [elt[1] for elt in result]
+                #print(datetimes)
+                return values, datetimes
+            except Exception as e:
+            #except (AttributeError, MySQLdb.OperationalError):
+                logger("Fehler beim lesen aus der Datenbank: "+str(e), logging)
+
+        else:
+            self.start()
 
     def calc_pwr_h(self, datetime):
-        # Calculates the collected solar ower within a given hour
+        # Calculates the collected solar power within a given hour
         # datetime hast to specified as follows: "2018-09-11 11%"
         if self.mysql_success == True:
             try:
@@ -117,6 +140,7 @@ if __name__ == "__main__":
     dbconn.start()
     #dbconn.write('2017-11-12 1:2:3', 'Test', 44.0)
     #result = dbconn.read_one("OekoKollLeistung", "2018-09-12 18:42:25")
-    result = dbconn.calc_pwr_h("2018-09-12 17%")
-    print(result)
+    #result = dbconn.calc_pwr_h("2018-09-12 17%")
+    #print(result)
+    dbconn.read_many("OekoKollLeistung", "2018-10-16%")
     dbconn.close()
