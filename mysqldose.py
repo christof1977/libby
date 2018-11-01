@@ -63,6 +63,7 @@ class mysqldose(object):
             except Exception as e:
             #except (AttributeError, MySQLdb.OperationalError):
                 logger("Fehler beim lesen aus der Datenbank: "+str(e), logging)
+                self.mysql_success = False
 
         else:
             self.start()
@@ -93,7 +94,7 @@ class mysqldose(object):
         # parameter: char(50)
         # value: float
         if self.mysql_success == True:
-            add = ("INSERT INTO messwert " 
+            add = ("INSERT INTO messwert "
                     "(datetime, parameter, value) "
                     "VALUES (%s, %s, %s)")
             data = (now, parameter, value)
@@ -115,7 +116,7 @@ class mysqldose(object):
 
 
 if __name__ == "__main__":
-    dbconn = mysqldose('heizung', 'heizung', 'dose.fritz.box', 'heizung') 
+    dbconn = mysqldose('heizung', 'heizung', 'dose.fritz.box', 'heizung')
     dbconn.start()
     #dbconn.write('2017-11-12 1:2:3', 'Test', 44.0)
     #result = dbconn.read_one("OekoKollLeistung", "2018-09-12 18:42:25")
