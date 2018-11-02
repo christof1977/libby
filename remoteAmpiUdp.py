@@ -16,7 +16,8 @@ def getcmds():
                   'hyperion',
                   'vol_up',
                   'vol_down',
-                  'mute' ]
+                  'mute',
+                  'dim_sw' ]
 
     return valid_cmds
 
