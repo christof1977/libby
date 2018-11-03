@@ -5,7 +5,7 @@ import sys
 import json
 import syslog
 
-#global s_udp_sock 
+#global s_udp_sock
 
 def getcmds():
     valid_cmds = ['CD',
@@ -26,7 +26,7 @@ def getcmds():
 def hilf():
     print('')
     print('*******************************')
-    print('amp_ctrl.py console remote tool')   
+    print('amp_ctrl.py console remote tool')
     #print('Connection::')
     #print('Address=' + addr)
     #print('Port=' + port)
@@ -83,7 +83,7 @@ def sende(udp_socket,addr,port,msg):
             print("Verbindungsfehler:", str(e))
     else:
         print("Not a valid command!")
- 
+
 def main():
     #addr = '127.0.0.1'
     addr = 'osmd.fritz.box'
@@ -94,12 +94,12 @@ def main():
     #curses.cbreak()
     #win.nodelay(True)
 
- 
+
     #global s_udp_sock
     s_udp_sock = socket.socket( socket.AF_INET,  socket.SOCK_DGRAM )
     valid_cmds = getcmds()
-    
-   
+
+
     if len(sys.argv) == 1:
         hilf()
         while True:
@@ -126,7 +126,7 @@ def main():
                 elif cmd == "m":
                     json_string = '{"Aktion" : "Volume", "Parameter" : "mute"}\n'
                 elif cmd == "a":
-                    json_string = '{"Aktion" : "Switch", "Parameter" : "amp_sw"}\n'
+                    json_string = '{"Aktion" : "Switch", "Parameter" : "power"}\n'
                 elif cmd == "o":
                     json_string = '{"Aktion" : "Switch", "Parameter" : "oled"}\n'
                 elif cmd == "f":
@@ -161,7 +161,7 @@ def main():
 
 
 if __name__ == "__main__":
-   main() 
-                                          
+   main()
+
 
 
