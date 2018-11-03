@@ -2,6 +2,7 @@
 
 import socket
 import sys
+import json
 import syslog
 
 #global s_udp_sock 
@@ -50,15 +51,15 @@ def hilf():
 
 
 def getch():
-        import sys, tty, termios
-        fd = sys.stdin.fileno( )
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(fd)
-            ch = sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ch
+    import sys, tty, termios
+    fd = sys.stdin.fileno( )
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        ch = sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    return ch
 
 
 def sende(udp_socket,addr,port,msg):
@@ -72,7 +73,8 @@ def sende(udp_socket,addr,port,msg):
         except Exception as e:
             print(str(e))
     valid_cmds = getcmds()
-    if msg in valid_cmds:
+    #if msg in valid_cmds:
+    if True:
         print("Gewaehlter Eingang:", msg)
         try:
             udp_socket.sendto( msg.encode(), (addr,port) )
@@ -99,44 +101,45 @@ def main():
     
    
     if len(sys.argv) == 1:
-       hilf()
-       while True:
-           try:
-               cmd = getch()
-               if cmd == "c":
-                   sende(s_udp_sock, addr, port, "CD")
-               elif cmd == "s":
-                   sende(s_udp_sock, addr, port, "Schneitzlberger")
-               elif cmd == "p":
-                   sende(s_udp_sock, addr, port, "Portable")
-               elif cmd == "h":
-                   sende(s_udp_sock, addr, port, "Hilfssherriffeingang")
-               elif cmd == "b":
-                   sende(s_udp_sock, addr, port, "Bladdnspiela")
-               elif cmd == "3":
-                   sende(s_udp_sock, addr, port, "Himbeer314")
-               elif cmd == "k":
-                   sende(s_udp_sock, addr, port, "hyperion")
-               elif cmd == "u":
-                   sende(s_udp_sock, addr, port, "vol_up")
-               elif cmd == "d":
-                   sende(s_udp_sock, addr, port, "vol_down")
-               elif cmd == "m":
-                   sende(s_udp_sock, addr, port, "mute")
-               elif cmd == "a":
-                   sende(s_udp_sock, addr, port, "amp_sw")
-               elif cmd == "o":
-                  sende(s_udp_sock, addr, port, "oled")
-               elif cmd == "f":
-                  sende(s_udp_sock, addr, port, "krampf")
-               elif cmd == "?":
-                  hilf()
-               elif cmd == "q":
-                  print("Bye")
-                  break
-           except KeyboardInterrupt:
-               print("Bye")
-               break
+        hilf()
+        while True:
+            try:
+                cmd = getch()
+                if cmd == "c":
+                    json_string = '{"Aktion" : "Input", "Parameter" : "CD"}\n'
+                elif cmd == "s":
+                    json_string = '{"Aktion" : "Input", "Parameter" : "Schneitzlberger"}\n'
+                elif cmd == "p":
+                    json_string = '{"Aktion" : "Input", "Parameter" : "Portable"}\n'
+                elif cmd == "h":
+                    json_string = '{"Aktion" : "Input", "Parameter" : "Hilfssherriffeingang"}\n'
+                elif cmd == "b":
+                    json_string = '{"Aktion" : "Input", "Parameter" : "Bladdnspiela"}\n'
+                elif cmd == "3":
+                    json_string = '{"Aktion" : "Input", "Parameter" : "Himbeer314"}\n'
+                elif cmd == "k":
+                    json_string = '{"Aktion" : "hyperion", "Parameter" : "-"}\n'
+                elif cmd == "u":
+                    json_string = '{"Aktion" : "Volume", "Parameter" : "up"}\n'
+                elif cmd == "d":
+                    json_string = '{"Aktion" : "Volume", "Parameter" : "down"}\n'
+                elif cmd == "m":
+                    json_string = '{"Aktion" : "Volume", "Parameter" : "mute"}\n'
+                elif cmd == "a":
+                    json_string = '{"Aktion" : "Switch", "Parameter" : "amp_sw"}\n'
+                elif cmd == "o":
+                    json_string = '{"Aktion" : "Switch", "Parameter" : "oled"}\n'
+                elif cmd == "f":
+                    json_string = '{"Aktion" : "Input", "Parameter" : "krampf"}\n'
+                sende(s_udp_sock, addr, port, json_string)
+                if cmd == "?":
+                    hilf()
+                elif cmd == "q":
+                    print("Bye")
+                    break
+            except KeyboardInterrupt:
+                print("Bye")
+                break
     elif len(sys.argv) == 2:
         if sys.argv[1] in valid_cmds:
             log = "Die Fernbedienung sagt: " + sys.argv[1]
