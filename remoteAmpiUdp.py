@@ -128,7 +128,7 @@ def main():
                 elif cmd == "a":
                     json_string = '{"Aktion" : "Switch", "Parameter" : "Power"}\n'
                 elif cmd == "o":
-                    json_string = '{"Aktion" : "Switch", "Parameter" : "Oled"}\n'
+                    json_string = '{"Aktion" : "Switch", "Parameter" : "DimOled"}\n'
                 elif cmd == "f":
                     json_string = '{"Aktion" : "Input", "Parameter" : "krampf"}\n'
                 sende(s_udp_sock, addr, port, json_string)
