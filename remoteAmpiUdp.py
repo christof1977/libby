@@ -11,14 +11,14 @@ def getcmds():
     valid_cmds = ['CD',
                   'Schneitzlberger',
                   'Portable',
-                  'Hilfssherriffeingang',
+                  'Hilfssherriff',
                   'Bladdnspiela',
                   'Himbeer314',
-                  'hyperion',
-                  'vol_up',
-                  'vol_down',
-                  'mute',
-                  'dim_sw' ]
+                  'Hyperion',
+                  'Vol_Up',
+                  'Vol_Down',
+                  'Mute',
+                  'DimOled' ]
 
     return valid_cmds
 
@@ -112,23 +112,23 @@ def main():
                 elif cmd == "p":
                     json_string = '{"Aktion" : "Input", "Parameter" : "Portable"}\n'
                 elif cmd == "h":
-                    json_string = '{"Aktion" : "Input", "Parameter" : "Hilfssherriffeingang"}\n'
+                    json_string = '{"Aktion" : "Input", "Parameter" : "Hilfssherriff"}\n'
                 elif cmd == "b":
                     json_string = '{"Aktion" : "Input", "Parameter" : "Bladdnspiela"}\n'
                 elif cmd == "3":
                     json_string = '{"Aktion" : "Input", "Parameter" : "Himbeer314"}\n'
                 elif cmd == "k":
-                    json_string = '{"Aktion" : "hyperion", "Parameter" : "-"}\n'
+                    json_string = '{"Aktion" : "Hyperion", "Parameter" : "-"}\n'
                 elif cmd == "u":
-                    json_string = '{"Aktion" : "Volume", "Parameter" : "up"}\n'
+                    json_string = '{"Aktion" : "Volume", "Parameter" : "Up"}\n'
                 elif cmd == "d":
-                    json_string = '{"Aktion" : "Volume", "Parameter" : "down"}\n'
+                    json_string = '{"Aktion" : "Volume", "Parameter" : "Down"}\n'
                 elif cmd == "m":
-                    json_string = '{"Aktion" : "Volume", "Parameter" : "mute"}\n'
+                    json_string = '{"Aktion" : "Volume", "Parameter" : "Mute"}\n'
                 elif cmd == "a":
-                    json_string = '{"Aktion" : "Switch", "Parameter" : "power"}\n'
+                    json_string = '{"Aktion" : "Switch", "Parameter" : "Power"}\n'
                 elif cmd == "o":
-                    json_string = '{"Aktion" : "Switch", "Parameter" : "oled"}\n'
+                    json_string = '{"Aktion" : "Switch", "Parameter" : "Oled"}\n'
                 elif cmd == "f":
                     json_string = '{"Aktion" : "Input", "Parameter" : "krampf"}\n'
                 sende(s_udp_sock, addr, port, json_string)
