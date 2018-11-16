@@ -44,6 +44,7 @@ def hilf():
     print('m  -> Mute/Unmute')
     print('a  -> Switch Amp on/off')
     print('o  -> OLED on/off')
+    print('z  -> Zustand?')
     print('')
     print('k  -> Change Background Color')
     print('?  -> This Text')
@@ -79,6 +80,8 @@ def sende(udp_socket,addr,port,msg):
         try:
             udp_socket.sendto( msg.encode(), (addr,port) )
             print("Gesendet")
+            data, addr = udp_socket.recvfrom(1024)
+            print(data)
         except Exception as e:
             print("Verbindungsfehler:", str(e))
     else:
@@ -131,6 +134,8 @@ def main():
                     json_string = '{"Aktion" : "Switch", "Parameter" : "DimOled"}\n'
                 elif cmd == "f":
                     json_string = '{"Aktion" : "Input", "Parameter" : "krampf"}\n'
+                elif cmd == "z":
+                    json_string = '{"Aktion" : "Zustand"}\n'
                 sende(s_udp_sock, addr, port, json_string)
                 if cmd == "?":
                     hilf()
