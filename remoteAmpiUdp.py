@@ -4,8 +4,18 @@ import socket
 import sys
 import json
 import syslog
+import select
+if __name__ == "__main__":
+    from logger import logger
+else:
+    from .logger import logger
 
-#global s_udp_sock
+logging = True
+
+
+udpTimeout = 4
+ADDR = 'osmd.fritz.box'
+PORT = 5005
 
 def getcmds():
     valid_cmds = ['CD',
@@ -63,43 +73,44 @@ def getch():
     return ch
 
 
-def sende(udp_socket,addr,port,msg):
-    #global s_udp_sock
-    #global Ziel
-    #global Port
-    if(udp_socket == None):
-        print("Öffne Socket")
+def sende(msg, **kwargs):
+    if('udpSocket' in kwargs):
+        udpSocket = kwargs('udpSocket')
+    else:
+        if('addr' not in kwargs or 'port' not in kwargs):
+            logger("Uiui, wohin soll ich mich nur verbinden? Naja, standard halt.",logging)
+            addr = ADDR
+            port = PORT
+        else:
+            addr = kwargs('addr')
+            port = kwargs('port')
+        logger("Öffne Socket",logging)
         try:
-            udp_socket = socket.socket( socket.AF_INET,  socket.SOCK_DGRAM )
+            udpSocket = socket.socket( socket.AF_INET,  socket.SOCK_DGRAM )
+            udpSocket.setblocking(0)
         except Exception as e:
             print(str(e))
     valid_cmds = getcmds()
-    #if msg in valid_cmds:
     if True:
         print("Gewaehlter Eingang:", msg)
-        try:
-            udp_socket.sendto( msg.encode(), (addr,port) )
+        ready = select.select([], [udpSocket], [], udpTimeout)
+        if(ready[1]):
+            udpSocket.sendto( msg.encode(), (addr,port) )
             print("Gesendet")
-            data, addr = udp_socket.recvfrom(1024)
-            print(data)
-        except Exception as e:
-            print("Verbindungsfehler:", str(e))
+        ready = select.select([udpSocket], [], [], udpTimeout)
+        if(ready[0]):
+            data, addr = udpSocket.recvfrom(1024)
+            print(data.decode())
+        #except Exception as e:
+        #    print("Verbindungsfehler:", str(e))
     else:
         print("Not a valid command!")
 
 def main():
-    #addr = '127.0.0.1'
     addr = 'osmd.fritz.box'
-    #addr = '192.168.178.37'
     port = 5005
 
-    #win = curses.initscr()
-    #curses.cbreak()
-    #win.nodelay(True)
-
-
-    #global s_udp_sock
-    s_udp_sock = socket.socket( socket.AF_INET,  socket.SOCK_DGRAM )
+    #udpSocket = socket.socket( socket.AF_INET,  socket.SOCK_DGRAM )
     valid_cmds = getcmds()
 
 
@@ -136,12 +147,12 @@ def main():
                     json_string = '{"Aktion" : "Input", "Parameter" : "krampf"}\n'
                 elif cmd == "z":
                     json_string = '{"Aktion" : "Zustand"}\n'
-                sende(s_udp_sock, addr, port, json_string)
                 if cmd == "?":
                     hilf()
                 elif cmd == "q":
                     print("Bye")
                     break
+                sende(json_string)
             except KeyboardInterrupt:
                 print("Bye")
                 break
@@ -150,7 +161,7 @@ def main():
             log = "Die Fernbedienung sagt: " + sys.argv[1]
             print(log)
             syslog.syslog(log)
-            sende(s_udp_sock, addr, port, sys.argv[1])
+            sende(sys.argv[1], addr=None, port=None)
             return()
         else:
             log = "Not a valid command"
