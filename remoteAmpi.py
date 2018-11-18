@@ -110,9 +110,7 @@ def udpRemote(msg, **kwargs):
             data, addr = udpSocket.recvfrom(1024)
             print(data.decode())
     except Exception as e:
-        print("Verbindungsfehler:", str(e))
-    else:
-        print("Not a valid command!")
+        print(str(e))
 
 def main():
     addr = 'osmd.fritz.box'
