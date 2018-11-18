@@ -3,15 +3,18 @@
 import socket
 import sys
 import json
-import syslog
+#import syslog
 import select
-if __name__ == "__main__":
-    from logger import logger
-else:
-    from .logger import logger
+import logging
+#if __name__ == "__main__":
+#    from logger import logger
+#else:
+#    from .logger import logger
 
-logging = True
+#logging = True
 
+
+logging.basicConfig(level=logging.DEBUG)
 
 udpTimeout = 4
 ADDR = 'osmd.fritz.box'
@@ -86,31 +89,31 @@ def udpRemote(msg, **kwargs):
         udpSocket = kwargs.get('udpSocket')
     else:
         if('addr' not in kwargs or 'port' not in kwargs):
-            logger("Uiui, wohin soll ich mich nur verbinden? Naja, standard halt.",logging)
+            logging.info("Uiui, wohin soll ich mich nur verbinden? Naja, standard halt.")
             addr = ADDR
             port = PORT
         else:
             addr = kwargs.get('addr')
             port = kwargs.get('port')
-        logger("Öffne Socket",logging)
+        logging.info("Öffne Socket")
         try:
             udpSocket = socket.socket( socket.AF_INET,  socket.SOCK_DGRAM )
             udpSocket.setblocking(0)
         except Exception as e:
-            print(str(e))
+            logging.info(str(e))
     valid_cmds = getcmds()
     try:
-        print("Gewaehlter Eingang:", msg)
+        logging.info("Gewaehlter Eingang: %s", msg)
         ready = select.select([], [udpSocket], [], udpTimeout)
         if(ready[1]):
             udpSocket.sendto( msg.encode(), (addr,port) )
-            print("Gesendet")
+            logging.info("Gesendet")
         ready = select.select([udpSocket], [], [], udpTimeout)
         if(ready[0]):
             data, addr = udpSocket.recvfrom(1024)
-            print(data.decode())
+            logging.info(data.decode())
     except Exception as e:
-        print(str(e))
+        logging.info(str(e))
 
 def main():
     addr = 'osmd.fritz.box'
@@ -155,15 +158,15 @@ def main():
                 if cmd == "?":
                     hilf()
                 elif cmd == "q":
-                    print("Bye")
+                    logging.info("Bye")
                     break
                 udpRemote(json_string, addr="osmd.fritz.box", port=5005)
             except KeyboardInterrupt:
-                print("Bye")
+                logging.info("Bye")
                 break
     else:
         log = "Not a valid command"
-        print(log)
+        logging.info(log)
         syslog.syslog(log)
         return()
 
