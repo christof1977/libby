@@ -3,15 +3,8 @@
 import socket
 import sys
 import json
-#import syslog
 import select
 import logging
-#if __name__ == "__main__":
-#    from logger import logger
-#else:
-#    from .logger import logger
-
-#logging = True
 
 
 logging.basicConfig(level=logging.DEBUG)
