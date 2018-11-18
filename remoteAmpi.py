@@ -109,8 +109,8 @@ def udpRemote(msg, **kwargs):
         if(ready[0]):
             data, addr = udpSocket.recvfrom(1024)
             print(data.decode())
-        except Exception as e:
-            print("Verbindungsfehler:", str(e))
+    except Exception as e:
+        print("Verbindungsfehler:", str(e))
     else:
         print("Not a valid command!")
 
