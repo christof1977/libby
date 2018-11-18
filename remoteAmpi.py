@@ -37,9 +37,6 @@ def hilf():
     print('')
     print('*******************************')
     print('amp_ctrl.py console remote tool')
-    #print('Connection::')
-    #print('Address=' + addr)
-    #print('Port=' + port)
     print('')
     print('Commands:')
     print('c  -> Input CD')
@@ -73,17 +70,28 @@ def getch():
     return ch
 
 
-def sende(msg, **kwargs):
+def tcpRemote(msg, **kwargs):
+    # Todo
+    pass
+
+
+def udpRemote(msg, **kwargs):
+    # Setzt einen JSON-String in Richtung Ampi per UDP ab
+    # msg: JSON-String nach Ampi-Spec
+    # udpSocket: wenn da ein Socket übergeben wird, wird halt der hergenommen
+    # addr, port: Gibt's keinen Socket, wird einer mit addr, port aufgemacht
+    # Wenn nix übergeben wird, gibt's halt einen Standard-Socket
+
     if('udpSocket' in kwargs):
-        udpSocket = kwargs('udpSocket')
+        udpSocket = kwargs.get('udpSocket')
     else:
         if('addr' not in kwargs or 'port' not in kwargs):
             logger("Uiui, wohin soll ich mich nur verbinden? Naja, standard halt.",logging)
             addr = ADDR
             port = PORT
         else:
-            addr = kwargs('addr')
-            port = kwargs('port')
+            addr = kwargs.get('addr')
+            port = kwargs.get('port')
         logger("Öffne Socket",logging)
         try:
             udpSocket = socket.socket( socket.AF_INET,  socket.SOCK_DGRAM )
@@ -91,7 +99,7 @@ def sende(msg, **kwargs):
         except Exception as e:
             print(str(e))
     valid_cmds = getcmds()
-    if True:
+    try:
         print("Gewaehlter Eingang:", msg)
         ready = select.select([], [udpSocket], [], udpTimeout)
         if(ready[1]):
@@ -101,8 +109,8 @@ def sende(msg, **kwargs):
         if(ready[0]):
             data, addr = udpSocket.recvfrom(1024)
             print(data.decode())
-        #except Exception as e:
-        #    print("Verbindungsfehler:", str(e))
+        except Exception as e:
+            print("Verbindungsfehler:", str(e))
     else:
         print("Not a valid command!")
 
@@ -110,7 +118,6 @@ def main():
     addr = 'osmd.fritz.box'
     port = 5005
 
-    #udpSocket = socket.socket( socket.AF_INET,  socket.SOCK_DGRAM )
     valid_cmds = getcmds()
 
 
@@ -152,22 +159,10 @@ def main():
                 elif cmd == "q":
                     print("Bye")
                     break
-                sende(json_string)
+                udpRemote(json_string, addr="osmd.fritz.box", port=5005)
             except KeyboardInterrupt:
                 print("Bye")
                 break
-    elif len(sys.argv) == 2:
-        if sys.argv[1] in valid_cmds:
-            log = "Die Fernbedienung sagt: " + sys.argv[1]
-            print(log)
-            syslog.syslog(log)
-            sende(sys.argv[1], addr=None, port=None)
-            return()
-        else:
-            log = "Not a valid command"
-            print(log)
-            syslog.syslog(log)
-            return()
     else:
         log = "Not a valid command"
         print(log)
