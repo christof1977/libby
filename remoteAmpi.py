@@ -103,7 +103,7 @@ def udpRemote(msg, **kwargs):
             logging.info(str(e))
     valid_cmds = getcmds()
     try:
-        logging.info("Gewaehlter Eingang: %s", msg)
+        logging.info("So laut des heit: %s", msg)
         ready = select.select([], [udpSocket], [], udpTimeout)
         if(ready[1]):
             udpSocket.sendto( msg.encode(), (addr,port) )
