@@ -7,7 +7,7 @@ import select
 import logging
 
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 udpTimeout = 4
 ADDR = 'osmd.fritz.box'
