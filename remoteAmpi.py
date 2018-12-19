@@ -105,8 +105,11 @@ def udpRemote(msg, **kwargs):
         if(ready[0]):
             data, addr = udpSocket.recvfrom(1024)
             logging.info(data.decode())
+            ret = data.decode()
     except Exception as e:
         logging.info(str(e))
+        ret = -1
+    return(ret)
 
 def main():
     addr = 'osmd.fritz.box'
