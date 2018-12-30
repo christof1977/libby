@@ -46,6 +46,8 @@ def hilf():
     print('d  -> Volume down')
     print('m  -> Mute/Unmute')
     print('a  -> Switch Amp on/off')
+    print('v  -> Activate/Deactivate Amp Output')
+    print('w  -> Activate/Deactivate Headphone Output')
     print('o  -> OLED on/off')
     print('z  -> Zustand?')
     print('')
@@ -135,6 +137,10 @@ def main():
                     json_string = '{"Aktion" : "Input", "Parameter" : "Bladdnspiela"}\n'
                 elif cmd == "3":
                     json_string = '{"Aktion" : "Input", "Parameter" : "Himbeer314"}\n'
+                elif cmd == "v":
+                    json_string = '{"Aktion" : "Output", "Parameter" : "AmpOut"}\n'
+                elif cmd == "w":
+                    json_string = '{"Aktion" : "Output", "Parameter" : "HeadOut"}\n'
                 elif cmd == "k":
                     json_string = '{"Aktion" : "Hyperion", "Parameter" : "-"}\n'
                 elif cmd == "u":
