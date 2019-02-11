@@ -19,6 +19,10 @@ class mysqldose(object):
         self.mysqlpass = mysqlpass
         self.mysqlserv = mysqlserv
         self.mysqldb = mysqldb
+        self.start()
+
+    def __del__(self):
+        self.close()
 
     def start(self):
         self.mysql_success = False
@@ -115,6 +119,8 @@ class mysqldose(object):
         # now = time.strftime('%Y-%m-%d %H:%M:%S')
         # parameter: char(50)
         # value: float
+        if now == "now":
+            now = time.strftime('%Y-%m-%d %H:%M:%S')
         if self.mysql_success == True:
             add = ("INSERT INTO messwert " 
                     "(datetime, parameter, value) "
