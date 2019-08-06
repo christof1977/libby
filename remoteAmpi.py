@@ -98,6 +98,7 @@ def udpRemote(msg, **kwargs):
             logging.info(str(e))
     valid_cmds = getcmds()
     try:
+        ret = -1
         logging.info("So laut des heit: %s", msg)
         ready = select.select([], [udpSocket], [], udpTimeout)
         if(ready[1]):
