@@ -125,6 +125,7 @@ def main():
         while True:
             try:
                 cmd = getch()
+                valid = 1
                 if cmd == "c":
                     json_string = '{"Aktion" : "Input", "Parameter" : "CD"}\n'
                 elif cmd == "s":
@@ -157,12 +158,16 @@ def main():
                     json_string = '{"Aktion" : "Input", "Parameter" : "krampf"}\n'
                 elif cmd == "z":
                     json_string = '{"Aktion" : "Zustand"}\n'
-                if cmd == "?":
+                elif cmd == "?":
                     hilf()
                 elif cmd == "q":
                     logging.info("Bye")
                     break
-                udpRemote(json_string, addr="osmd.fritz.box", port=5005)
+                else:
+                    logging.info("Invalid command")
+                    valid = 0
+                if valid:
+                    udpRemote(json_string, addr="osmd.fritz.box", port=5005)
             except KeyboardInterrupt:
                 logging.info("Bye")
                 break
