@@ -35,6 +35,8 @@ def hilf():
     print('s  -> get Status')
     print('r  -> get Rooms')
     print('e  -> get Room Status')
+    print('m  -> get Room Mode')
+    print('n  -> set Room Mode')
     print('t  -> get Timer')
     print('')
     print('?  -> This Text')
@@ -118,6 +120,20 @@ def get_room():
     else:
         return("WZ")
 
+def get_mode():
+    print('')
+    print('0 -> aus')
+    print('1 -> an')
+    print('a -> auto')
+    mode = getch()
+    if(mode == "0"):
+        return("off")
+    elif(mode == "1"):
+        return("on")
+    else:
+        return("auto")
+
+
 def main():
     addr = 'heizung'
     port = 5005
@@ -143,6 +159,13 @@ def main():
                 elif cmd == "t":
                     room = get_room()
                     json_string = '{"command" : "getTimer", "room" : "'+ room +'"}\n'
+                elif cmd == "m":
+                    room = get_room()
+                    json_string = '{"command" : "getRoomMode", "room" : "'+ room +'"}\n'
+                elif cmd == "n":
+                    room = get_room()
+                    mode = get_mode()
+                    json_string = '{"command" : "setRoomMode", "room" : "'+ room +'", "mode": "'+ mode +'"}\n'
                 elif cmd == "?":
                     hilf()
                 elif cmd == "q":
