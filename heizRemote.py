@@ -37,8 +37,11 @@ def hilf():
     print('e  -> get Room Status')
     print('m  -> get Room Mode')
     print('n  -> set Room Mode')
+    print('o  -> get Room Shorttimer')
+    print('p  -> set Room Shorttimer')
     print('t  -> get Timer')
     print('')
+    print('y  -> Select controller')
     print('?  -> This Text')
     print('q  -> Quit')
 
@@ -101,22 +104,18 @@ def udpRemote(msg, **kwargs):
         logging.info(str(e))
         return -1
 
-def get_room():
-    print('')
-    print('w -> Wohnzimmer')
-    print('s -> Schlafzimmer')
-    print('a -> Arbeitszimmer')
-    print('k -> Küche')
-    print('b -> Bad')
+def get_room(addr):
+    ret = json.loads(udpRemote('{"command":"getStatus"}\n', addr=addr, port=5005))
+    rooms_avail = {}
+    for room in ret:
+        rooms_avail[room[0].lower()] = room
+        print('')
+    for short in rooms_avail:
+        print(short, "->", rooms_avail[short])
     room = getch()
-    rooms = {"w":"WZ",
-             "s":"SZ",
-             "a":"AZ",
-             "k":"K",
-             "b":"BadEG"}
-    if room in rooms.keys():
-        print(rooms[room])
-        return(rooms[room])
+    if room in rooms_avail.keys():
+        #print(rooms_avail[room])
+        return(rooms_avail[room])
     else:
         return("WZ")
 
@@ -133,9 +132,18 @@ def get_mode():
     else:
         return("auto")
 
+def auswahl():
+    print('o -> oben')
+    print('u -> unten')
+    auswahl =  getch()
+    if(auswahl == "o"):
+        addr = "fbhdg"
+    else:
+        addr = "heizungeg"
+    return(addr)
 
 def main():
-    addr = 'heizung'
+    addr = 'heizungeg'
     port = 5005
 
     valid_cmds = getcmds()
@@ -154,20 +162,36 @@ def main():
                 elif cmd == "r":
                     json_string = '{"command" : "getRooms"}\n'
                 elif cmd == "e":
-                    room = get_room()
-                    json_string = '{"command" : "getRoomStatus", "room" : "'+ room +'"}\n'
+                    room = get_room(addr)
+                    json_string = '{"command" : "getRoomStatus", "Room" : "'+ room +'"}\n'
                 elif cmd == "t":
-                    room = get_room()
-                    json_string = '{"command" : "getTimer", "room" : "'+ room +'"}\n'
+                    room = get_room(addr)
+                    json_string = '{"command" : "getTimer", "Room" : "'+ room +'"}\n'
                 elif cmd == "m":
-                    room = get_room()
-                    json_string = '{"command" : "getRoomMode", "room" : "'+ room +'"}\n'
+                    room = get_room(addr)
+                    json_string = '{"command" : "getRoomMode", "Room" : "'+ room +'"}\n'
                 elif cmd == "n":
-                    room = get_room()
+                    room = get_room(addr)
                     mode = get_mode()
-                    json_string = '{"command" : "setRoomMode", "room" : "'+ room +'", "mode": "'+ mode +'"}\n'
+                    json_string = '{"command" : "setRoomMode", "Room" : "'+ room +'", "Mode": "'+ mode +'"}\n'
+                elif cmd == "y":
+                    addr = auswahl()
+                    json_string = '{"command" : "getAlive"}\n'
+                elif cmd == "o":
+                    room = get_room(addr)
+                    json_string = '{"command" : "getRoomShortTimer", "Room" : "' + room + '"}\n'
+                elif cmd == "p":
+                    room = get_room(addr)
+                    mode = get_mode()
+                    try:
+                        seconds = int(input("Minuten: ")) * 60
+                        json_string = '{"command" : "setRoomShortTimer", "Room" : "' + room + '", "Mode": "' + mode +'" ,"Time" : "' + str(seconds) + '" }\n'
+                    except Exception as e:
+                        print("Falsch!", e)
+                        break
                 elif cmd == "?":
                     hilf()
+                    valid = 0
                 elif cmd == "q":
                     logging.info("Bye")
                     break
@@ -175,7 +199,8 @@ def main():
                     logging.info("Invalid command")
                     valid = 0
                 if valid:
-                    ret = udpRemote(json_string, addr="heizungeg", port=5005)
+                    #ret = udpRemote(json_string, addr="heizungeg", port=5005)
+                    ret = udpRemote(json_string, addr=addr, port=5005)
                     if(ret!=-1):
                         try:
                             print(json.dumps(json.loads(ret),indent=4))
