@@ -50,7 +50,7 @@ def udpRemote(msg, **kwargs):
         if(ready[0]):
             data, addr = udpSocket.recvfrom(1024)
             logging.info(data.decode())
-            ret = data.decode()
+            ret = json.loads(data.decode())
             return(ret)
     except Exception as e:
         logging.info(str(e))
@@ -59,4 +59,8 @@ def udpRemote(msg, **kwargs):
 
 
 if __name__ == "__main__":
-     pass
+    json_string = '{"command" : "getAlive"}'
+    answer = udpRemote(json_string, addr="heizungeg.local", port=5005)
+    print(answer)
+    print(type(answer))
+    pass

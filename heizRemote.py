@@ -64,7 +64,7 @@ def getch():
 
 
 def get_room(addr):
-    ret = json.loads(udpRemote('{"command":"getStatus"}\n', addr=addr, port=5005))
+    ret = udpRemote('{"command":"getStatus"}\n', addr=addr, port=5005)
     rooms_avail = {}
     for room in ret:
         rooms_avail[room[0].lower()] = room
@@ -174,7 +174,7 @@ def main():
                     ret = udpRemote(json_string, addr=addr, port=5005)
                     if(ret!=-1):
                         try:
-                            print(json.dumps(json.loads(ret),indent=4))
+                            print(json.dumps(ret,indent=4))
                             #print(ret)
                         except:
                             print("ups")
