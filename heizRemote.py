@@ -39,6 +39,8 @@ def hilf():
     print('n  -> set Room Mode')
     print('o  -> get Room Shorttimer')
     print('p  -> set Room Shorttimer')
+    print('v  -> get Room normTemp')
+    print('b  -> set Room normTemp')
     print('t  -> get Timer')
     print('')
     print('y  -> Select controller')
@@ -132,6 +134,11 @@ def get_mode():
     else:
         return("auto")
 
+def get_temp():
+    temp = float(input("Temp: "))
+    return(temp)
+
+
 def auswahl():
     print('o -> oben')
     print('u -> unten')
@@ -174,6 +181,13 @@ def main():
                     room = get_room(addr)
                     mode = get_mode()
                     json_string = '{"command" : "setRoomMode", "Room" : "'+ room +'", "Mode": "'+ mode +'"}\n'
+                elif cmd == "v":
+                    room = get_room(addr)
+                    json_string = '{"command" : "getRoomNormTemp", "Room" : "'+ room +'"}\n'
+                elif cmd == "b":
+                    room = get_room(addr)
+                    temp = get_temp()
+                    json_string = '{"command" : "setRoomNormTemp", "Room" : "'+ room +'", "normTemp": "'+ str(temp) +'"}\n'
                 elif cmd == "y":
                     addr = auswahl()
                     json_string = '{"command" : "getAlive"}\n'
