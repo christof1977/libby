@@ -154,6 +154,8 @@ def main():
                 elif cmd == "o":
                     room = get_room(addr)
                     json_string = '{"command" : "getRoomShortTimer", "Room" : "' + room + '"}\n'
+                elif cmd == "z":
+                    json_string = '{"command" : "reloadTimer"}'
                 elif cmd == "p":
                     room = get_room(addr)
                     mode = get_mode()
