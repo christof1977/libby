@@ -43,6 +43,7 @@ def hilf():
     print('v  -> get Room normTemp')
     print('b  -> set Room normTemp')
     print('t  -> get Timer')
+    print('f  -> reload Timer File')
     print('')
     print('y  -> Select controller')
     print('?  -> This Text')
@@ -131,6 +132,8 @@ def main():
                 elif cmd == "t":
                     room = get_room(addr)
                     json_string = '{"command" : "getTimer", "Room" : "'+ room +'"}\n'
+                elif cmd == "f":
+                    json_string = '{"command" : "reloadTimer"}'
                 elif cmd == "m":
                     room = get_room(addr)
                     json_string = '{"command" : "getRoomMode", "Room" : "'+ room +'"}\n'
