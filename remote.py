@@ -48,7 +48,7 @@ def udpRemote(msg, **kwargs):
             logging.info("Gesendet")
         ready = select.select([udpSocket], [], [], udpTimeout)
         if(ready[0]):
-            data, addr = udpSocket.recvfrom(1024)
+            data, addr = udpSocket.recvfrom(8192)
             logging.info(data.decode())
             ret = json.loads(data.decode())
             return(ret)
