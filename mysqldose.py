@@ -4,12 +4,16 @@ import syslog
 #import MySQLdb
 import pymysql
 import time
-if __name__ == "__main__":
-    from logger import logger
-else:
-    from .logger import logger
 
-logging = False
+import logging
+logging.basicConfig(level=logging.INFO)
+
+#if __name__ == "__main__":
+#    from logger import logger
+#else:
+#    from .logger import logger
+
+#logging = False
 
 class mysqldose(object):
     pass
@@ -30,11 +34,11 @@ class mysqldose(object):
             #self.cnx = MySQLdb.connect(user=self.mysqluser, passwd=self.mysqlpass,host=self.mysqlserv,db=self.mysqldb)
             self.cnx = pymysql.connect(user=self.mysqluser, passwd=self.mysqlpass,host=self.mysqlserv,db=self.mysqldb)
             self.mysql_success = True
-            logger("Database connection established", logging)
+            logging.info("Database connection established")
         except Exception as e:
             try:
                 self.mysql_success = False
-                logger("Database connection error: "+str(e), logging)
+                logging.error("Database connection error: "+str(e))
                 print("1: ",str(e))
                 self.cnx.disconnect()
             except Exception as e:
@@ -44,7 +48,7 @@ class mysqldose(object):
     def close(self):
         if self.mysql_success == True:
             self.cnx.close()
-            logger("DB Connection terminated", logging)
+            logging.info("DB Connection terminated")
 
     def read_one(self, parameter, datetime = None):
         # reads a single value of the messwert table
@@ -66,7 +70,7 @@ class mysqldose(object):
                 return row[0][0]
             except Exception as e:
             #except (AttributeError, MySQLdb.OperationalError):
-                logger("Fehler beim lesen aus der Datenbank: "+str(e), logging)
+                logging.error("Fehler beim lesen aus der Datenbank: "+str(e))
                 self.mysql_success = False
 
         else:
@@ -90,7 +94,7 @@ class mysqldose(object):
                 return values, datetimes
             except Exception as e:
             #except (AttributeError, MySQLdb.OperationalError):
-                logger("Fehler beim lesen aus der Datenbank: "+str(e), logging)
+                logging.error("Fehler beim lesen aus der Datenbank: "+str(e))
 
         else:
             self.start()
@@ -109,7 +113,7 @@ class mysqldose(object):
                 return row[0][0]
             except Exception as e:
             #except (AttributeError, MySQLdb.OperationalError):
-                logger("Fehler beim lesen aus der Datenbank: "+str(e), logging)
+                logging.error("Fehler beim lesen aus der Datenbank: "+str(e))
         else:
             self.start()
 
@@ -136,7 +140,7 @@ class mysqldose(object):
                 return mess_id
                 #print(add)
             except Exception as e:
-                logger("Fehler beim Schreiben in die Datenbank: "+str(e), logging)
+                logging.error("Fehler beim Schreiben in die Datenbank: "+str(e))
                 self.close()
                 self.start()
         else:
