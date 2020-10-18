@@ -1,23 +1,14 @@
 #!/usr/bin/env python3
 
 import syslog
-#import MySQLdb
 import pymysql
 import time
 
 import logging
 logging.basicConfig(level=logging.INFO)
-
-#if __name__ == "__main__":
-#    from logger import logger
-#else:
-#    from .logger import logger
-
-#logging = False
+#logging.basicConfig(level=logging.DEBUG)
 
 class mysqldose(object):
-    pass
-
     def __init__(self, mysqluser, mysqlpass, mysqlserv, mysqldb):
         self.mysqluser = mysqluser
         self.mysqlpass = mysqlpass
@@ -72,10 +63,9 @@ class mysqldose(object):
             #except (AttributeError, MySQLdb.OperationalError):
                 logging.error("Fehler beim lesen aus der Datenbank: "+str(e))
                 self.mysql_success = False
-
         else:
             self.start()
-    
+
     def read_many(self, parameter, datetime):
         # reads many values of the messwert table
         # parameter is the parameter to read
@@ -95,7 +85,6 @@ class mysqldose(object):
             except Exception as e:
             #except (AttributeError, MySQLdb.OperationalError):
                 logging.error("Fehler beim lesen aus der Datenbank: "+str(e))
-
         else:
             self.start()
 
@@ -117,8 +106,6 @@ class mysqldose(object):
         else:
             self.start()
 
-
-
     def write(self, now, parameter, value):
         # writes to the messwert table of the database
         # now = time.strftime('%Y-%m-%d %H:%M:%S')
@@ -126,27 +113,27 @@ class mysqldose(object):
         # value: float
         if now == "now":
             now = time.strftime('%Y-%m-%d %H:%M:%S')
-        if self.mysql_success == True:
-            add = ("INSERT INTO messwert "
-                    "(datetime, parameter, value) "
-                    "VALUES (%s, %s, %s)")
-            data = (now, parameter, value)
-            try:
-                self.cursor = self.cnx.cursor()
-                self.cursor.execute(add, data)
-                mess_id = self.cursor.lastrowid
-                self.cnx.commit()
-                self.cursor.close()
-                return mess_id
-                #print(add)
-            except Exception as e:
-                logging.error("Fehler beim Schreiben in die Datenbank: "+str(e))
-                self.close()
-                self.start()
-        else:
+        logging.debug("Opening connection to DB")
+        con = pymysql.connect(user=self.mysqluser, passwd=self.mysqlpass,host=self.mysqlserv,db=self.mysqldb)
+        add = ("INSERT INTO messwert "
+                "(datetime, parameter, value) "
+                "VALUES (%s, %s, %s)")
+        data = (now, parameter, value)
+        logging.debug(data)
+        try:
+            with con.cursor() as cur:
+                logging.debug("Executing query")
+                cur.execute(add, data)
+                mess_id = cur.lastrowid
+                con.commit()
+        except Exception as e:
+            logging.error("Fehler beim Schreiben in die Datenbank: "+str(e))
+            self.close()
             self.start()
-
-
+        finally:
+            logging.debug("Closing connection to DB")
+            con.close()
+        return mess_id
 
 if __name__ == "__main__":
     dbconn = mysqldose('heizung', 'heizung', 'dose.fritz.box', 'heizung')
