@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 
+import sys
+import getopt
 import syslog
 import pymysql
 import time
+from datetime import datetime, date, timedelta
+import numpy as np
 
 import logging
-#logging.basicConfig(level=logging.INFO)
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.DEBUG)
 
 class mysqldose(object):
     def __init__(self, mysqluser, mysqlpass, mysqlserv, mysqldb):
@@ -78,88 +82,13 @@ class mysqldose(object):
             con.close()
         return values, datetimes
 
-    def calc_pwr(self, year, month=None, day=None, hour=None):
-        # Calculates the collected solar power within a given hour
-        # datetime hast to specified as follows: "2018-09-11 11%"
-        con = pymysql.connect(user=self.mysqluser, passwd=self.mysqlpass,host=self.mysqlserv,db=self.mysqldb)
-        if(month is None):
-            start = str(year) + "-01-01"
-            end = str(year + 1) + "-01-01"
-        elif(day is None):
-            if(month < 1 or month > 12):
-                return
-            else:
-                start = str(year) + "-" + str(month) + "-01"
-            if(month == 12):
-                end = str(year + 1) + "-01-01" 
-            else:
-                end = str(year) + "-" + str(month + 1) + "-01" 
-        elif(hour is None):
-            if(day < 1 or day > 31):
-                return
-            else:
-                start = str(year) + "-" + str(month) + "-" + str(day)
-                end = str(year) + "-" + str(month) + "-" + str(day + 1)
-
-
-       # if(hour is None):
-       #     end_month = month + 1
-       #     if(end_month > 12):
-       #         end
-       #     start = str(year) + "-" + str(month)
-       #     end = str(year) + "-" + str(month + 1)
-
-        #start = day + " " + str(hour)
-        #end = day + " " + str(hour + 1)
-        print(start)
-        print(end)
-        #try:
-        #    with con.cursor() as cur:
-        #        query ='SELECT ROUND(SUM(value)/COUNT(value), 3) FROM messwert WHERE parameter = %s AND datetime BETWEEN %s AND %s'
-        #        cur.execute(query, ("OekoKollLeistung", start, end))
-        #        row = cur.fetchall()
-        #        con.commit()
-        #except Exception as e:
-        #    logging.error("Fehler beim lesen aus der Datenbank: "+str(e))
-        #finally:
-        #    con.close()
-        #return row[0][0]
-
-    def calc_pwr_month(self, year, month):
-        con = pymysql.connect(user=self.mysqluser, passwd=self.mysqlpass,host=self.mysqlserv,db=self.mysqldb)
-        start = str(year) + "-" + str(month) + "-01"
-        try:
-            with con.cursor() as cur:
-                query = "SELECT \
-                        ROUND(SUM(value)/(3600/(86400/COUNT(value))) * \
-                        DATEDIFF(DATE_ADD(%s, INTERVAL 1 MONTH), %s), 3) \
-                        FROM messwert WHERE parameter = %s AND \
-                        datetime BETWEEN %s AND \
-                        DATE_ADD(%s, INTERVAL 1 MONTH);"
-                #query ='SELECT ROUND(SUM(value)/COUNT(value), 3) FROM messwert WHERE parameter = %s AND datetime BETWEEN %s AND DATE_ADD(%s, INTERVAL 1 MONTH)'
-                cur.execute(query, (start, start, "OekoKollLeistung", start, start))
-                row = cur.fetchall()
-                con.commit()
-        except Exception as e:
-            logging.error("Fehler beim lesen aus der Datenbank: "+str(e))
-        finally:
-            con.close()
-        return row[0][0]
-
-    def calc_pwr_year(self, year):
-        power = []
-        for month in range(1,13):
-            result = self.calc_pwr_month(year, month)
-            if(result is not None):
-                power.append(result)
-            print(month, ":",result, "kWh")
-        return(sum(power))
-
     def write(self, now, parameter, value):
-        # writes to the messwert table of the database
-        # now = time.strftime('%Y-%m-%d %H:%M:%S')
-        # parameter: char(50)
-        # value: float
+        '''
+        writes to the messwert table of the database
+        now = time.strftime('%Y-%m-%d %H:%M:%S')
+        parameter: char(50)
+        value: float
+        '''
         if now == "now":
             now = time.strftime('%Y-%m-%d %H:%M:%S')
         logging.debug("Opening connection to DB")
@@ -194,13 +123,179 @@ class mysqldose(object):
             con.close()
         return mess_id
 
+    def insert_daily_row(self, day):
+        '''
+        This function checks, if the table entry for the given day already
+        exists; if not, the entry is created. Important for the daily calc
+        functions.
+        '''
+        con = pymysql.connect(user=self.mysqluser, passwd=self.mysqlpass,host=self.mysqlserv,db=self.mysqldb)
+        try:
+            with con.cursor() as cur:
+                query = 'SELECT * FROM daily WHERE day = %s'
+                cur.execute(query, day)
+                rows = cur.rowcount
+                if(rows == 0):
+                    query = 'INSERT INTO daily (day) \
+                            VALUES (%s)'
+                    cur.execute(query, day.date())
+                    con.commit()
+        except Exception as e:
+            logging.error("Reading from DB: "+str(e))
+        finally:
+            logging.debug("Closing connection to DB")
+            con.close()
+
+    def read_day(self, day, parameter):
+        '''
+        This function reads all values of parameter for a given day in as  date
+        object and returns the result array.
+        '''
+        end_date = day + timedelta(hours=23, minutes=59, seconds=59)
+        con = pymysql.connect(user=self.mysqluser, passwd=self.mysqlpass,host=self.mysqlserv,db=self.mysqldb)
+        try:
+            with con.cursor() as cur:
+                query = 'SELECT messwert.index, messwert.datetime,\
+                        messwert.value \
+                        FROM parameter \
+                        JOIN messwert \
+                        ON messwert.parameter = parameter.parid \
+                        WHERE datetime BETWEEN %s AND %s \
+                        AND parameter.parameter = %s'
+                cur.execute(query, (day, end_date, parameter))
+                res = cur.fetchall()
+        except Exception as e:
+            logging.error("Fehler beim Schreiben in die Datenbank: "+str(e))
+        finally:
+            logging.debug("Closing connection to DB")
+            con.close()
+        return(res)
+
+    def write_day(self, day, parameter, value):
+        '''
+        This function writes the daily value of a given parameter to the daily
+        table.
+        '''
+        self.insert_daily_row(day)
+        con = pymysql.connect(user=self.mysqluser, passwd=self.mysqlpass,host=self.mysqlserv,db=self.mysqldb)
+        try:
+            with con.cursor() as cur:
+                update = 'UPDATE daily SET {} = %s \
+                          WHERE day = %s;'
+                cur.execute(update.format(parameter), (value, day))
+                con.commit()
+        except Exception as e:
+            logging.error("Fehler beim Schreiben in die Datenbank: "+str(e))
+        finally:
+            logging.debug("Closing connection to DB")
+            con.close()
+
+    def date_values(self, day=None):
+        '''
+        Returns a datetime object for given day or today with time 00:00:00 as
+        start_date and time 23:59:50 as end_date
+        '''
+        if(day is None):
+            start_date = datetime.combine(date.today(), datetime.min.time())
+        else:
+            try:
+                start_date = datetime.strptime(day, "%Y-%m-%d")
+            except:
+                logging.error("Not a valid date")
+                return(-1)
+        end_date = start_date + timedelta(hours=23, minutes=59, seconds=59)
+        return(start_date, end_date)
+
+    def update_solar_gain(self, day=None):
+        '''
+        This function reads the solar gain of a given day out of the
+        messwert database table and stores the sum in the daily database
+        If no day is given, today is chosen.
+        '''
+        start_date, end_date = self.date_values(day)
+        res = self.read_day(start_date, "OekoKollLeistung")
+        pwr = []
+        for line in res:
+            pwr.append(line[2])
+        pwr = round(sum(pwr)/(3600/(86400/len(pwr))), 3)
+        self.write_day(start_date, "Solarertrag", pwr)
+
+    def update_pellet_consumption(self, day=None):
+        '''
+        This function reads the pellet consumption of a given day out of the
+        messwert database table and stores the sum in the daily database
+        If no day is given, today is chosen.
+        '''
+        start_date, end_date = self.date_values(day)
+        res = self.read_day(start_date, "OekoStoragePopper")
+        val = [0]
+        for line in res:
+            try:
+                if(line[2] != val[-1]):
+                    val.append(line[2])
+            except:
+                pass
+        val.pop(0)
+        val = np.array(val)
+        diffval = np.diff(val)
+        noval = len(diffval)
+        diffval = diffval[diffval != -1]
+        verbrauch = noval - len(diffval)
+        self.write_day(start_date, "VerbrauchPellets", verbrauch)
+
+    def update_heating_energy(self, parameter, day=None):
+        '''
+        This function reads the value of the heating power consumption of a
+        given day or today and the value of the day before and calculates the
+        power consuption of this day. The values is stored in the daily table.
+        '''
+        start_date, end_date = self.date_values(day)
+        try:
+            con_today  = self.read_day(start_date, parameter)[0][2]
+            yesterday = start_date - timedelta(1)
+            con_yesterday  = self.read_day(yesterday, parameter)[0][2]
+            con = (con_today - con_yesterday)/1000
+            self.write_day(start_date, parameter, con)
+        except Exception as e:
+            logging.error("Something went wrong: " + str(e))
+
 if __name__ == "__main__":
+    day = None
+    update = False
+    argv = sys.argv[1:]
+    try:
+        opts, args = getopt.getopt(argv, 'd:u')
+    except getopt.GetoptError as err:
+        logging.error("Arguments error!")
+        exit()
+    for o,a in opts:
+        if(o == "-d"):
+            if(a == "yesterday"):
+                day = date.today() - timedelta(1)
+                day = day.strftime("%Y-%m-%d")
+            else:
+                try:
+                    day = datetime.strptime(a, "%Y-%m-%d")
+                except:
+                    logging.error("Invalid date format. Use something like 2020-10-10. Bye")
+                    exit()
+        elif(o == "-u"):
+            update = True
+
     dbconn = mysqldose('heizung', 'heizung', 'dose', 'heizung')
+    if(update):
+        logging.info("Performing daily database updates")
+        dbconn.update_solar_gain(day=day)
+        dbconn.update_pellet_consumption(day=day)
+        dbconn.update_heating_energy("VerbrauchHeizungEg", day=day)
+
+    logging.info("Bye.")
+
+
+
     #dbconn.write('2017-11-12 1:2:3', 'Test', 44.0)
-    result = dbconn.read_one("OekoKollLeistung", "2018-09-12")
-    print(result)
-    #result = dbconn.calc_pwr("2020-09", day= 12, hour=12)
-    #result = dbconn.calc_pwr(2019, month=11, day = 3)
+    #result = dbconn.read_one("OekoKollLeistung", "2018-09-12")
+    #dbconn.update_pellet_consumption(day="2020-10-23")
+    #dbconn.update_heating_energy("VerbrauchHeizungEg",day="2020-10-23")
     #print(dbconn.read_many("OekoAussenTemp", "2020-10-18 18:01%"))
     #print(dbconn.read_one("OekoAussenTemp"))
-    #print(dbconn.calc_pwr_year(2020), "kWh")
