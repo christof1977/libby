@@ -5,7 +5,7 @@ import getopt
 import syslog
 import pymysql
 import time
-from datetime import datetime, date, timedelta
+import datetime
 import numpy as np
 
 import logging
@@ -138,7 +138,7 @@ class mysqldose(object):
                 if(rows == 0):
                     query = 'INSERT INTO daily (day) \
                             VALUES (%s)'
-                    cur.execute(query, day.date())
+                    cur.execute(query, day.datetime.date())
                     con.commit()
         except Exception as e:
             logging.error("Reading from DB: "+str(e))
@@ -151,7 +151,7 @@ class mysqldose(object):
         This function reads all values of parameter for a given day in as  date
         object and returns the result array.
         '''
-        end_date = day + timedelta(hours=23, minutes=59, seconds=59)
+        end_date = day + datetime.timedelta(hours=23, minutes=59, seconds=59)
         con = pymysql.connect(user=self.mysqluser, passwd=self.mysqlpass,host=self.mysqlserv,db=self.mysqldb)
         try:
             with con.cursor() as cur:
@@ -196,14 +196,18 @@ class mysqldose(object):
         start_date and time 23:59:50 as end_date
         '''
         if(day is None):
-            start_date = datetime.combine(date.today(), datetime.min.time())
+            start_date = datetime.datetime.combine(datetime.date.today(), datetime.datetime.min.time())
+            print(type(start_date))
+        elif(isinstance(day, datetime.date)):
+            start_date = datetime.datetime.combine(day, datetime.datetime.min.time())
         else:
             try:
-                start_date = datetime.strptime(day, "%Y-%m-%d")
+                start_date = datetime.datetime.strptime(day, "%Y-%m-%d")
+                print(type(start_date))
             except:
                 logging.error("Not a valid date")
                 return(-1)
-        end_date = start_date + timedelta(hours=23, minutes=59, seconds=59)
+        end_date = start_date + datetime.timedelta(hours=23, minutes=59, seconds=59)
         return(start_date, end_date)
 
     def update_solar_gain(self, day=None):
@@ -252,12 +256,41 @@ class mysqldose(object):
         start_date, end_date = self.date_values(day)
         try:
             con_today  = self.read_day(start_date, parameter)[0][2]
-            yesterday = start_date - timedelta(1)
+            yesterday = start_date - datetime.timedelta(1)
             con_yesterday  = self.read_day(yesterday, parameter)[0][2]
             con = (con_today - con_yesterday)/1000
             self.write_day(start_date, parameter, con)
         except Exception as e:
             logging.error("Something went wrong: " + str(e))
+
+    def delete_redundancy(self, parameter, day=None):
+        logging.info("Deleting")
+        start_date, end_date = self.date_values(day)
+        res = self.read_day(start_date, parameter)
+        #print(parameter, res, start_date, end_date)
+        value = 0
+        idx_del = []
+        idx_nodel = []
+        for line in res:
+            if(line[2] == value):
+                idx_del.append(line[0])
+            else:
+                print(line[0], line[2])
+                idx_nodel.append(line[0])
+            value = line[2]
+        del_query = 'DELETE FROM messwert WHERE `index` = %s LIMIT 1;'
+        for id_del in idx_del:
+            con = pymysql.connect(user=self.mysqluser, passwd=self.mysqlpass,host=self.mysqlserv,db=self.mysqldb)
+            try:
+                logging.info("Deleting %s" % id_del)
+                with con.cursor() as cur:
+                    cur.execute(del_query, id_del)
+                    con.commit()
+            except Exception as e:
+                logging.error("Error while deleting record: "+str(e))
+            finally:
+                logging.debug("Closing connection to DB")
+                con.close()
 
 if __name__ == "__main__":
     day = None
@@ -271,11 +304,11 @@ if __name__ == "__main__":
     for o,a in opts:
         if(o == "-d"):
             if(a == "yesterday"):
-                day = date.today() - timedelta(1)
+                day = datetime.date.today() - datetime.timedelta(1)
                 day = day.strftime("%Y-%m-%d")
             else:
                 try:
-                    day = datetime.strptime(a, "%Y-%m-%d")
+                    day = datetime.datetime.strptime(a, "%Y-%m-%d")
                 except:
                     logging.error("Invalid date format. Use something like 2020-10-10. Bye")
                     exit()
@@ -288,6 +321,15 @@ if __name__ == "__main__":
         dbconn.update_solar_gain(day=day)
         dbconn.update_pellet_consumption(day=day)
         dbconn.update_heating_energy("VerbrauchHeizungEg", day=day)
+        dbconn.delete_redundancy("OekoStorageFill", day=day)
+        dbconn.delete_redundancy("OekoStoragePopper", day=day)
+
+
+    start_date = datetime.date(2017,9,1)
+    day_count = 1200
+    for single_date in (start_date + datetime.timedelta(n) for n in range(day_count)):
+        dbconn.delete_redundancy("OekoStorageFill", day=single_date)
+        dbconn.delete_redundancy("OekoStoragePopper", day=single_date)
 
     logging.info("Bye.")
 
