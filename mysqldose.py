@@ -138,7 +138,7 @@ class mysqldose(object):
                 if(rows == 0):
                     query = 'INSERT INTO daily (day) \
                             VALUES (%s)'
-                    cur.execute(query, day.datetime.date())
+                    cur.execute(query, day.date())
                     con.commit()
         except Exception as e:
             logging.error("Reading from DB: "+str(e))
@@ -197,13 +197,11 @@ class mysqldose(object):
         '''
         if(day is None):
             start_date = datetime.datetime.combine(datetime.date.today(), datetime.datetime.min.time())
-            print(type(start_date))
         elif(isinstance(day, datetime.date)):
             start_date = datetime.datetime.combine(day, datetime.datetime.min.time())
         else:
             try:
                 start_date = datetime.datetime.strptime(day, "%Y-%m-%d")
-                print(type(start_date))
             except:
                 logging.error("Not a valid date")
                 return(-1)
@@ -267,7 +265,6 @@ class mysqldose(object):
         logging.info("Deleting")
         start_date, end_date = self.date_values(day)
         res = self.read_day(start_date, parameter)
-        #print(parameter, res, start_date, end_date)
         value = 0
         idx_del = []
         idx_nodel = []
@@ -275,7 +272,6 @@ class mysqldose(object):
             if(line[2] == value):
                 idx_del.append(line[0])
             else:
-                print(line[0], line[2])
                 idx_nodel.append(line[0])
             value = line[2]
         del_query = 'DELETE FROM messwert WHERE `index` = %s LIMIT 1;'
@@ -328,8 +324,8 @@ if __name__ == "__main__":
     start_date = datetime.date(2017,9,1)
     day_count = 1200
     for single_date in (start_date + datetime.timedelta(n) for n in range(day_count)):
-        dbconn.delete_redundancy("OekoStorageFill", day=single_date)
-        dbconn.delete_redundancy("OekoStoragePopper", day=single_date)
+        dbconn.delete_redundancy("OekoCiStatus", day=single_date)
+        dbconn.delete_redundancy("OekoPeStatus", day=single_date)
 
     logging.info("Bye.")
 
