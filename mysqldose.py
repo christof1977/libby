@@ -12,7 +12,13 @@ import logging
 logging.basicConfig(level=logging.INFO)
 #logging.basicConfig(level=logging.DEBUG)
 
-class mysqldose(object):
+class Mysqldose(object):
+    '''
+    The class Mysqldose provides the connection to the MySQL/MariaDB-Server on
+    dose, in poarticular the database heizung. This database stores all logged
+    data of the house. Data could be written or read from the db. Moreover, the
+    class provides methods for daily maintenance and caluclations.
+    '''
     def __init__(self, mysqluser, mysqlpass, mysqlserv, mysqldb):
         self.mysqluser = mysqluser
         self.mysqlpass = mysqlpass
@@ -214,6 +220,7 @@ class mysqldose(object):
         messwert database table and stores the sum in the daily database
         If no day is given, today is chosen.
         '''
+        logging.info("Calculating solar gain and writing value to daily table")
         start_date, end_date = self.date_values(day)
         res = self.read_day(start_date, "OekoKollLeistung")
         pwr = []
@@ -228,6 +235,7 @@ class mysqldose(object):
         messwert database table and stores the sum in the daily database
         If no day is given, today is chosen.
         '''
+        logging.info("Calculating pellet consumption and writing value to daily table")
         start_date, end_date = self.date_values(day)
         res = self.read_day(start_date, "OekoStoragePopper")
         val = [0]
@@ -251,6 +259,7 @@ class mysqldose(object):
         given day or today and the value of the day before and calculates the
         power consuption of this day. The values is stored in the daily table.
         '''
+        logging.info("Getting consumed heating energy of day and  writing value to daily table")
         start_date, end_date = self.date_values(day)
         try:
             con_today  = self.read_day(start_date, parameter)[0][2]
@@ -262,7 +271,7 @@ class mysqldose(object):
             logging.error("Something went wrong: " + str(e))
 
     def delete_redundancy(self, parameter, day=None):
-        logging.info("Deleting")
+        logging.info("Deleting redundant values of {}".format(parameter))
         start_date, end_date = self.date_values(day)
         res = self.read_day(start_date, parameter)
         value = 0
@@ -288,15 +297,44 @@ class mysqldose(object):
                 logging.debug("Closing connection to DB")
                 con.close()
 
+
+    def daily_updates(self, day):
+        '''
+        This method performs the daily updates. Day must be given in format
+        "2020-10-10",
+        '''
+        logging.info("Performing daily database updates")
+        self.update_solar_gain(day=day)
+        self.update_pellet_consumption(day=day)
+        self.update_heating_energy("VerbrauchHeizungEg", day=day)
+        self.delete_redundancy("OekoStorageFill", day=day)
+        self.delete_redundancy("OekoStoragePopper", day=day)
+        self.delete_redundancy("OekoCiStatus", day=day)
+        self.delete_redundancy("OekoPeStatus", day=day)
+
 if __name__ == "__main__":
+    '''
+    When this file is called as a main program, it is a helper for daily jobs.
+    To use this file for testing, just call the file withour arguments.
+    For daily jobs, ther are arguments:
+        mysqldose.py -d day -u
+        -d day: Specifiy day in format "2020-10-10", could also be "yesterday"
+        -u: perform daily updates
+        e.g.; mysqldose.py -d yesterday -u
+    '''
+    # Creating object
+    dbconn = Mysqldose('heizung', 'heizung', 'dose', 'heizung')
+    # Varible initialization
     day = None
     update = False
+    #Check if arguments are valid
     argv = sys.argv[1:]
     try:
         opts, args = getopt.getopt(argv, 'd:u')
     except getopt.GetoptError as err:
         logging.error("Arguments error!")
         exit()
+    #Parsing arguments
     for o,a in opts:
         if(o == "-d"):
             if(a == "yesterday"):
@@ -311,21 +349,13 @@ if __name__ == "__main__":
         elif(o == "-u"):
             update = True
 
-    dbconn = mysqldose('heizung', 'heizung', 'dose', 'heizung')
+
     if(update):
-        logging.info("Performing daily database updates")
-        dbconn.update_solar_gain(day=day)
-        dbconn.update_pellet_consumption(day=day)
-        dbconn.update_heating_energy("VerbrauchHeizungEg", day=day)
-        dbconn.delete_redundancy("OekoStorageFill", day=day)
-        dbconn.delete_redundancy("OekoStoragePopper", day=day)
+        dbconn.daily_updates(day)
 
-
-    start_date = datetime.date(2017,9,1)
-    day_count = 1200
-    for single_date in (start_date + datetime.timedelta(n) for n in range(day_count)):
-        dbconn.delete_redundancy("OekoCiStatus", day=single_date)
-        dbconn.delete_redundancy("OekoPeStatus", day=single_date)
+    #start_date = datetime.date(2017,9,1)
+    #day_count = 1200
+    #for single_date in (start_date + datetime.timedelta(n) for n in range(day_count)):
 
     logging.info("Bye.")
 
