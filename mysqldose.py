@@ -271,7 +271,7 @@ class Mysqldose(object):
             logging.error("Something went wrong: " + str(e))
 
     def delete_redundancy(self, parameter, day=None):
-        logging.info("Deleting redundant values of {}".format(parameter))
+        logging.debug("Deleting redundant values of {}".format(parameter))
         start_date, end_date = self.date_values(day)
         res = self.read_day(start_date, parameter)
         value = 0
@@ -287,7 +287,7 @@ class Mysqldose(object):
         for id_del in idx_del:
             con = pymysql.connect(user=self.mysqluser, passwd=self.mysqlpass,host=self.mysqlserv,db=self.mysqldb)
             try:
-                logging.info("Deleting %s" % id_del)
+                logging.debug("Deleting %s" % id_del)
                 with con.cursor() as cur:
                     cur.execute(del_query, id_del)
                     con.commit()
@@ -296,6 +296,7 @@ class Mysqldose(object):
             finally:
                 logging.debug("Closing connection to DB")
                 con.close()
+        logging.info("Deleted {} redundant values of {}".format(len(idx_del), parameter))
 
 
     def daily_updates(self, day):
