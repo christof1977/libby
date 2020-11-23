@@ -25,7 +25,7 @@ class Mysqldose(object):
         self.mysqlserv = mysqlserv
         self.mysqldb = mysqldb
 
-    def read_one(self, parameter, datetime = None):
+    def read_one(self, parameter, dt = None):
         # reads a single value of the messwert table
         # parameter is the parameter to read
         # datetime can be empty or specified like "YYYY-MM-DD HH:mm:ss"
@@ -35,20 +35,20 @@ class Mysqldose(object):
             with con.cursor() as cur:
                 logging.debug("Executing query")
                 if datetime == None:
-                    query ='SELECT messwert.value \
+                    query ='SELECT messwert.value, messwert.index \
                             FROM parameter \
                             JOIN messwert \
                             ON messwert.parameter = parameter.parid \
                             WHERE parameter.parameter = %s \
-                            ORDER BY `messwert.index` DESC LIMIT 0, 1;'
+                            ORDER BY messwert.index DESC LIMIT 0, 1;'
                     cur.execute(query, (parameter,))
                 else:
                     query ='SELECT messwert.value, messwert.datetime \
                             FROM parameter \
                             JOIN messwert ON messwert.parameter = parameter.parid \
                             WHERE parameter.parameter = %s \
-                            AND messwert.datetime LIKE %s;'
-                    cur.execute(query, (parameter, datetime))
+                            AND messwert.datetime > %s;'
+                    cur.execute(query, (parameter, dt))
                 row = cur.fetchall()
         except Exception as e:
             logging.error("Fehler beim lesen aus der Datenbank: "+str(e))
@@ -56,7 +56,10 @@ class Mysqldose(object):
         finally:
             logging.debug("Closing connection to DB")
             con.close()
-        return row[0][0]
+        if(row):
+                return row[0][0]
+        else:
+            return("Error")
 
     def read_many(self, parameter, datetime):
         # reads many values of the messwert table
@@ -307,7 +310,8 @@ class Mysqldose(object):
         logging.info("Performing daily database updates")
         self.update_solar_gain(day=day)
         self.update_pellet_consumption(day=day)
-        self.update_heating_energy("VerbrauchHeizungEg", day=day)
+        self.update_heating_energy("VerbrauchHeizungEG", day=day)
+        self.update_heating_energy("VerbrauchHeizungDG", day=day)
         self.delete_redundancy("OekoStorageFill", day=day)
         self.delete_redundancy("OekoStoragePopper", day=day)
         self.delete_redundancy("OekoCiStatus", day=day)
@@ -365,6 +369,6 @@ if __name__ == "__main__":
     #dbconn.write('2017-11-12 1:2:3', 'Test', 44.0)
     #result = dbconn.read_one("OekoKollLeistung", "2018-09-12")
     #dbconn.update_pellet_consumption(day="2020-10-23")
-    #dbconn.update_heating_energy("VerbrauchHeizungEg",day="2020-10-23")
+    #dbconn.update_heating_energy("VerbrauchHeizungEG",day="2020-10-23")
     #print(dbconn.read_many("OekoAussenTemp", "2020-10-18 18:01%"))
     #print(dbconn.read_one("OekoAussenTemp"))
