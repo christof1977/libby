@@ -301,6 +301,25 @@ class Mysqldose(object):
                 con.close()
         logging.info("Deleted {} redundant values of {}".format(len(idx_del), parameter))
 
+    def update_daily_average_temp(self, parameter, day=None):
+        '''
+        This function reads the recorded temperature values of a day,
+        calculates the mean value and stores it in the daily database.
+        '''
+        logging.info("Calculation mean temperature and writing value to daily table")
+        start_date, end_date = self.date_values(day)
+        try:
+            mean_temp = self.get_mean(parameter, start_date)
+            self.write_day(start_date, parameter, mean_temp)
+        except Exception as e:
+            logging.error("Something went wrong: " + str(e))
+
+    def get_mean(self, parameter, day=None):
+        logging.debug("Calculation average for {}".format(parameter))
+        start_date, end_date = self.date_values(day)
+        res = self.read_day(start_date, parameter)
+        res = np.array(res)
+        return(round(np.mean(res[:,2]),2))
 
     def daily_updates(self, day):
         '''
@@ -316,6 +335,7 @@ class Mysqldose(object):
         self.delete_redundancy("OekoStoragePopper", day=day)
         self.delete_redundancy("OekoCiStatus", day=day)
         self.delete_redundancy("OekoPeStatus", day=day)
+        self.update_daily_average_temp("OekoAussenTemp", day=day)
 
 if __name__ == "__main__":
     '''
@@ -358,12 +378,13 @@ if __name__ == "__main__":
     if(update):
         dbconn.daily_updates(day)
 
-    #start_date = datetime.date(2017,9,1)
-    #day_count = 1200
-    #for single_date in (start_date + datetime.timedelta(n) for n in range(day_count)):
+    start_date = datetime.date(2018,8,11)
+    day_count = 841
+    for single_date in (start_date + datetime.timedelta(n) for n in range(day_count)):
+        print(single_date)
+        dbconn.update_daily_average_temp("OekoAussenTemp", day=single_date)
 
     logging.info("Bye.")
-
 
 
     #dbconn.write('2017-11-12 1:2:3', 'Test', 44.0)
