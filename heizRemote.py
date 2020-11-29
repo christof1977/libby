@@ -46,6 +46,7 @@ def hilf():
     print('f  -> reload Timer File')
     print('')
     print('y  -> Select controller')
+    print('c  -> Get Counter Values')
     print('?  -> This Text')
     print('q  -> Quit')
 
@@ -156,6 +157,8 @@ def main():
                     json_string = '{"command" : "getRoomShortTimer", "Room" : "' + room + '"}\n'
                 elif cmd == "z":
                     json_string = '{"command" : "reloadTimer"}'
+                elif cmd == "c":
+                    json_string = '{"command" : "getCounterValues"}'
                 elif cmd == "p":
                     room = get_room(addr)
                     mode = get_mode()
