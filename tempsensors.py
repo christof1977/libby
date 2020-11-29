@@ -6,7 +6,9 @@
 # 1-Wire Slave-Liste lesen
 
 class onewires():
-    pass
+
+    def __init__(self):
+        self.old_values = {}
 
     def enumerate(self):
         self.w1_slaves = []
@@ -18,18 +20,34 @@ class onewires():
         return self.w1_slaves
 
     def getValue(self, w1_slave):
-        fhd = open('/sys/bus/w1/devices/' + str(w1_slave) + '/w1_slave')
-        filecontent = fhd.read()
-        fhd.close()
+        def _get_value(w1_slave):
+            fhd = open('/sys/bus/w1/devices/' + str(w1_slave) + '/w1_slave')
+            filecontent = fhd.read()
+            fhd.close()
 
-        # Temperaturwerte auslesen und konvertieren
-        stringvalue = filecontent.split("\n")[1].split(" ")[9]
-        temperature = float(stringvalue[2:]) / 1000
+            # Temperaturwerte auslesen und konvertieren
+            stringvalue = filecontent.split("\n")[1].split(" ")[9]
+            return (float(stringvalue[2:]) / 1000)
 
+        temperature = _get_value(w1_slave)
+
+        try:
+            # Wenn bereits ein vorhergehender Wert für diesen Sensor gespeichert ist, wird alt und neu verglichen.
+            # Wenn die Abweichung größer 5°C ist, gehen wir mal davon aus, dass der ausgelesene Wert falsch ist
+            # und lesen ihe einfach nochmal aus, so oft bis die Abweichung kleiner 5°C ist.
+            if(abs(temperature-self.old_values[str(w1_slave)]) <= 5):
+                # Temperaturwert für nächstes Runde speichern
+                self.old_values[str(w1_slave)] = temperature
+            else:
+                print("NICHT Innerhalb +/- 5 Grad")
+                print(temperature)
+                temperature = _get_value(w1_slave)
+        except:
+            # Hier geht's rein, wenn der für den Sensor nooch kein alter Wert existiert
+            # Temperaturwert für nächstes Runde speichern
+            self.old_values[str(w1_slave)] = temperature
         # Temperatur ausgeben
         return temperature
-
-
 
     def getAllValues(self):
         # Fuer jeden 1-Wire Slave aktuelle Temperatur ausgeben
