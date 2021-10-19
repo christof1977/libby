@@ -378,13 +378,13 @@ if __name__ == "__main__":
     if(update):
         dbconn.daily_updates(day)
 
-    start_date = datetime.date(2018,8,11)
-    day_count = 841
-    for single_date in (start_date + datetime.timedelta(n) for n in range(day_count)):
-        print(single_date)
-        dbconn.update_daily_average_temp("OekoAussenTemp", day=single_date)
+    #start_date = datetime.date(2018,8,11)
+    #day_count = 841
+    #for single_date in (start_date + datetime.timedelta(n) for n in range(day_count)):
+    #    print(single_date)
+    #    dbconn.update_daily_average_temp("OekoAussenTemp", day=single_date)
 
-    logging.info("Bye.")
+    #logging.info("Bye.")
 
 
     #dbconn.write('2017-11-12 1:2:3', 'Test', 44.0)
