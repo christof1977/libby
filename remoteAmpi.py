@@ -12,7 +12,7 @@ from remote import udpRemote
 logging.basicConfig(level=logging.INFO)
 
 udpTimeout = 4
-ADDR = 'osmd.local'
+ADDR = 'osmd'
 PORT = 5005
 
 def getcmds():
@@ -71,7 +71,7 @@ def getch():
 
 
 def main():
-    addr = 'osmd.local'
+    addr = 'osmd'
     port = 5005
 
     valid_cmds = getcmds()
@@ -124,7 +124,7 @@ def main():
                     logging.info("Invalid command")
                     valid = 0
                 if valid:
-                    udpRemote(json_string, addr="osmd.local", port=5005)
+                    udpRemote(json_string, addr="osmd", port=5005)
             except KeyboardInterrupt:
                 logging.info("Bye")
                 break
