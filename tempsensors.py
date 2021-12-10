@@ -3,6 +3,14 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import logging
+
+
+logger = logging.getLogger(__name__)
+#logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
+
+
 # 1-Wire Slave-Liste lesen
 
 class onewires():
@@ -39,8 +47,7 @@ class onewires():
                 # Temperaturwert für nächstes Runde speichern
                 self.old_values[str(w1_slave)] = temperature
             else:
-                print("NICHT Innerhalb +/- 5 Grad")
-                print(temperature)
+                logger.info("NICHT Innerhalb +/- 5 Grad: " + str(temperature) + "°C")
                 temperature = _get_value(w1_slave)
         except:
             # Hier geht's rein, wenn der für den Sensor nooch kein alter Wert existiert
@@ -53,7 +60,7 @@ class onewires():
         # Fuer jeden 1-Wire Slave aktuelle Temperatur ausgeben
         for line in self.w1_slaves:
             temperature = self.getValue(line)
-            print(str(line) + ': %6.2f °C' % temperature)
+            logger.info(str(line) + ': %6.2f °C' % temperature)
 
 def main():
     ow = onewires()
