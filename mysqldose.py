@@ -229,7 +229,10 @@ class Mysqldose(object):
         pwr = []
         for line in res:
             pwr.append(line[2])
-        pwr = round(sum(pwr)/(3600/(86400/len(pwr))), 3)
+        try:
+            pwr = round(sum(pwr)/(3600/(86400/len(pwr))), 3)
+        except ZeroDivisionError:
+            pwr = 0
         self.write_day(start_date, "Solarertrag", pwr)
 
     def update_pellet_consumption(self, day=None):
