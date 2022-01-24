@@ -315,6 +315,27 @@ class Mysqldose(object):
         except Exception as e:
             logging.error("Something went wrong: " + str(e))
 
+    def influx_query2(self, day=None):
+        client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
+        query_api = client.query_api()
+        start_date, end_date = self.date_values_influx(day)
+        query = 'from(bucket: "'+ self.influxbucket +'") \
+                |> range(start:'+start_date+', stop: '+ end_date+') \
+                      |> filter(fn: (r) => r["topic"] == "E3DC/BAT_DATA/0/BAT_USABLE_CAPACITY" and r["_field"] == "value") \
+                      |> max()'
+        result = query_api.query(query)
+        for table in result:
+            for record in table:
+                max_cap = round(record.get_value(), 2)
+        query = 'from(bucket: "'+ self.influxbucket +'") \
+                |> range(start:'+start_date+', stop: '+ end_date+') \
+                      |> filter(fn: (r) => r["topic"] == "E3DC/DCDC_DATA/0/DCDC_U_BAT" and r["_field"] == "value") \
+                      |> max()'
+        result = query_api.query(query)
+        for table in result:
+            for record in table:
+                max_voltage = round(record.get_value(), 2)
+        print(max_cap, max_voltage, round(max_cap*max_voltage*0.9/1000,2))
 
     def influx_query(self, parameter, fil, day=None):
         start_date, end_date = self.date_values_influx(day)
@@ -463,6 +484,8 @@ if __name__ == "__main__":
 
     if(update):
         dbconn.daily_updates(day)
+
+    dbconn.influx_query2(day)
 
     #start_date = datetime.date(2018,8,11)
     #day_count = 841
