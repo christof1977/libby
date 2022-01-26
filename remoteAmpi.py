@@ -2,6 +2,7 @@
 #coding: utf8
 
 import socket
+import getopt
 import sys
 import json
 import select
@@ -12,8 +13,7 @@ from remote import udpRemote
 logging.basicConfig(level=logging.INFO)
 
 udpTimeout = 4
-ADDR = 'osmd.local'
-PORT = 5005
+port = 5005
 
 def getcmds():
     valid_cmds = ['CD',
@@ -69,10 +69,49 @@ def getch():
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     return ch
 
+def sendcmd(cmd):
+    valid = 1
+    if cmd == "c":
+        json_string = '{"Aktion" : "Input", "Parameter" : "CD"}\n'
+    elif cmd == "s":
+        json_string = '{"Aktion" : "Input", "Parameter" : "Schneitzlberger"}\n'
+    elif cmd == "p":
+        json_string = '{"Aktion" : "Input", "Parameter" : "Portable"}\n'
+    elif cmd == "h":
+        json_string = '{"Aktion" : "Input", "Parameter" : "Hilfssherriff"}\n'
+    elif cmd == "b":
+        json_string = '{"Aktion" : "Input", "Parameter" : "Bladdnspiela"}\n'
+    elif cmd == "3":
+        json_string = '{"Aktion" : "Input", "Parameter" : "Himbeer314"}\n'
+    elif cmd == "v":
+        json_string = '{"Aktion" : "Output", "Parameter" : "AmpOut"}\n'
+    elif cmd == "w":
+        json_string = '{"Aktion" : "Output", "Parameter" : "HeadOut"}\n'
+    elif cmd == "k":
+        json_string = '{"Aktion" : "Hyperion", "Parameter" : "-"}\n'
+    elif cmd == "u":
+        json_string = '{"Aktion" : "Volume", "Parameter" : "Up"}\n'
+    elif cmd == "d":
+        json_string = '{"Aktion" : "Volume", "Parameter" : "Down"}\n'
+    elif cmd == "m":
+        json_string = '{"Aktion" : "Volume", "Parameter" : "Mute"}\n'
+    elif cmd == "a":
+        json_string = '{"Aktion" : "Switch", "Parameter" : "Power"}\n'
+    elif cmd == "o":
+        json_string = '{"Aktion" : "Switch", "Parameter" : "DimOled"}\n'
+    elif cmd == "f":
+        json_string = '{"Aktion" : "Input", "Parameter" : "krampf"}\n'
+    elif cmd == "z":
+        json_string = '{"Aktion" : "Zustand"}\n'
+    else:
+        valid = 0
+    if valid == 1:
+        udpRemote(json_string, addr="127.0.0.1", port=port)
+    else:
+        logging.warning("Invalid command")
 
-def main():
-    addr = 'osmd.local'
-    port = 5005
+
+def interactive():
 
     valid_cmds = getcmds()
 
@@ -82,62 +121,71 @@ def main():
         while True:
             try:
                 cmd = getch()
-                valid = 1
-                if cmd == "c":
-                    json_string = '{"Aktion" : "Input", "Parameter" : "CD"}\n'
-                elif cmd == "s":
-                    json_string = '{"Aktion" : "Input", "Parameter" : "Schneitzlberger"}\n'
-                elif cmd == "p":
-                    json_string = '{"Aktion" : "Input", "Parameter" : "Portable"}\n'
-                elif cmd == "h":
-                    json_string = '{"Aktion" : "Input", "Parameter" : "Hilfssherriff"}\n'
-                elif cmd == "b":
-                    json_string = '{"Aktion" : "Input", "Parameter" : "Bladdnspiela"}\n'
-                elif cmd == "3":
-                    json_string = '{"Aktion" : "Input", "Parameter" : "Himbeer314"}\n'
-                elif cmd == "v":
-                    json_string = '{"Aktion" : "Output", "Parameter" : "AmpOut"}\n'
-                elif cmd == "w":
-                    json_string = '{"Aktion" : "Output", "Parameter" : "HeadOut"}\n'
-                elif cmd == "k":
-                    json_string = '{"Aktion" : "Hyperion", "Parameter" : "-"}\n'
-                elif cmd == "u":
-                    json_string = '{"Aktion" : "Volume", "Parameter" : "Up"}\n'
-                elif cmd == "d":
-                    json_string = '{"Aktion" : "Volume", "Parameter" : "Down"}\n'
-                elif cmd == "m":
-                    json_string = '{"Aktion" : "Volume", "Parameter" : "Mute"}\n'
-                elif cmd == "a":
-                    json_string = '{"Aktion" : "Switch", "Parameter" : "Power"}\n'
-                elif cmd == "o":
-                    json_string = '{"Aktion" : "Switch", "Parameter" : "DimOled"}\n'
-                elif cmd == "f":
-                    json_string = '{"Aktion" : "Input", "Parameter" : "krampf"}\n'
-                elif cmd == "z":
-                    json_string = '{"Aktion" : "Zustand"}\n'
-                elif cmd == "?":
+                if cmd == "?":
                     hilf()
                 elif cmd == "q":
                     logging.info("Bye")
                     break
-                else:
-                    logging.info("Invalid command")
-                    valid = 0
-                if valid:
-                    udpRemote(json_string, addr="osmd.local", port=5005)
+                sendcmd(cmd)
+                    #valid = 0
+                #if valid:
             except KeyboardInterrupt:
                 logging.info("Bye")
                 break
     else:
         log = "Not a valid command"
-        logging.info(log)
-        syslog.syslog(log)
+        logging.warning(log)
         return()
 
 
 
 if __name__ == "__main__":
-   main()
+    argv = sys.argv[1:]
+    if(len(argv)==0):
+        interactive()
+    try:
+        opts, args = getopt.getopt(argv, 'i:v:s:', ["input=", "volume=", "switch="])
+    except getopt.GetoptError as err:
+        logging.error("Arguments error!")
+        exit()
+    #Parsing arguments
+    for o,a in opts:
+        if o in ("-i", "--input"):
+            if a in ("CD", "cd"):
+                sendcmd("c")
+            elif a in ("LP", "lp", "Phono", "phono", "Bladdnspiela", "bladdnspiela"):
+                sendcmd("b")
+            elif a in ("Himbeer314", "himbeer314", "pi", "Pi"):
+                sendcmd("3")
+            elif a in ("Schneitzlberger", "schneitzlberger", "TV", "tv"):
+                sendcmd("s")
+            elif a in ("AUX", "Aux", "aux"):
+                sendcmd("h")
+            elif a in ("Portable", "portable"):
+                sendcmd("p")
+            else:
+                logging.warning("Not a valid input")
+        elif o in ("-v", "--volume"):
+            if a in ("mute", "Mute"):
+                sendcmd("m")
+            elif a in ("down", "Down"):
+                sendcmd("d")
+            elif a in ("up", "Up"):
+                sendcmd("u")
+            else:
+                logging.warning("Not a valid volume control")
+        elif o in ("-s", "--switch"):
+            if a in ("power", "Power"):
+                sendcmd("a")
+            elif a in ("mediacenter", "Mediacenter"):
+                #tbd
+                pass
+            elif a in ("dimoled", "DimOled"):
+                sendcmd("o")
+            else:
+                logging.warning("Not a valid switch command")
+        else:
+            pass
 
 
 
