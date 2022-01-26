@@ -110,12 +110,8 @@ def sendcmd(cmd):
     else:
         logging.warning("Invalid command")
 
-
 def interactive():
-
     valid_cmds = getcmds()
-
-
     if len(sys.argv) == 1:
         hilf()
         while True:
@@ -127,8 +123,6 @@ def interactive():
                     logging.info("Bye")
                     break
                 sendcmd(cmd)
-                    #valid = 0
-                #if valid:
             except KeyboardInterrupt:
                 logging.info("Bye")
                 break
@@ -136,7 +130,6 @@ def interactive():
         log = "Not a valid command"
         logging.warning(log)
         return()
-
 
 
 if __name__ == "__main__":

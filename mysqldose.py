@@ -1,29 +1,57 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 import getopt
 import syslog
+import configparser
 import pymysql
 import time
 import datetime
 import numpy as np
+from influxdb_client import InfluxDBClient, Point
+from influxdb_client.client.write_api import SYNCHRONOUS
 
 import logging
 logging.basicConfig(level=logging.INFO)
 #logging.basicConfig(level=logging.DEBUG)
 
+configfile = "collectdata.ini"
+realpath = os.path.realpath(__file__)
+basepath = os.path.split(realpath)[0]
+configfile = os.path.join(basepath, configfile)
+
 class Mysqldose(object):
     '''
     The class Mysqldose provides the connection to the MySQL/MariaDB-Server on
-    dose, in poarticular the database heizung. This database stores all logged
+    dose, in particular the database heizung. This database stores all logged
     data of the house. Data could be written or read from the db. Moreover, the
     class provides methods for daily maintenance and caluclations.
     '''
     def __init__(self, mysqluser, mysqlpass, mysqlserv, mysqldb):
-        self.mysqluser = mysqluser
-        self.mysqlpass = mysqlpass
-        self.mysqlserv = mysqlserv
-        self.mysqldb = mysqldb
+        self.read_config()
+        #self.mysqluser = mysqluser
+        #self.mysqlpass = mysqlpass
+        #self.mysqlserv = mysqlserv
+        #self.mysqldb = mysqldb
+
+    def read_config(self):
+        try:
+            self.config = configparser.ConfigParser()
+            self.config.read(configfile)
+            self.basehost = self.config['BASE']['Host']
+            self.baseport = int(self.config['BASE']['Port'])
+            self.mysqluser = self.config['BASE']['Mysqluser']
+            self.mysqlpass = self.config['BASE']['Mysqlpass']
+            self.mysqlserv = self.config['BASE']['Mysqlserv']
+            self.mysqldb = self.config['BASE']['Mysqldb']
+            self.influxserv = self.config['BASE']['Influxserv']
+            self.influxtoken = self.config['BASE']['Influxtoken']
+            self.influxbucket = self.config['BASE']['Influxbucket']
+            self.influxorg = self.config['BASE']['Influxorg']
+        except Exception as e:
+            logging.error("Configuration error")
+            logging.error(e)
 
     def read_one(self, parameter, dt = None):
         # reads a single value of the messwert table
@@ -217,6 +245,17 @@ class Mysqldose(object):
         end_date = start_date + datetime.timedelta(hours=23, minutes=59, seconds=59)
         return(start_date, end_date)
 
+    def date_values_influx(self, day=None):
+        '''
+        Returns a datetime string for given day or today with time 00:00:00 as
+        start_date and time 23:59:50 as end_date in format 2021-12-12T00:00:00Z
+        for use with influxdb
+        '''
+        start_date, end_date = self.date_values(day)
+        start_date = start_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+        end_date = end_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+        return(start_date, end_date)
+
     def update_solar_gain(self, day=None):
         '''
         This function reads the solar gain of a given day out of the
@@ -229,7 +268,10 @@ class Mysqldose(object):
         pwr = []
         for line in res:
             pwr.append(line[2])
-        pwr = round(sum(pwr)/(3600/(86400/len(pwr))), 3)
+        try:
+            pwr = round(sum(pwr)/(3600/(86400/len(pwr))), 3)
+        except ZeroDivisionError:
+            pwr = 0
         self.write_day(start_date, "Solarertrag", pwr)
 
     def update_pellet_consumption(self, day=None):
@@ -272,6 +314,67 @@ class Mysqldose(object):
             self.write_day(start_date, parameter, con)
         except Exception as e:
             logging.error("Something went wrong: " + str(e))
+
+    def influx_query2(self, day=None):
+        client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
+        query_api = client.query_api()
+        start_date, end_date = self.date_values_influx(day)
+        query = 'from(bucket: "'+ self.influxbucket +'") \
+                |> range(start:'+start_date+', stop: '+ end_date+') \
+                      |> filter(fn: (r) => r["topic"] == "E3DC/BAT_DATA/0/BAT_USABLE_CAPACITY" and r["_field"] == "value") \
+                      |> max()'
+        result = query_api.query(query)
+        for table in result:
+            for record in table:
+                max_cap = round(record.get_value(), 2)
+        query = 'from(bucket: "'+ self.influxbucket +'") \
+                |> range(start:'+start_date+', stop: '+ end_date+') \
+                      |> filter(fn: (r) => r["topic"] == "E3DC/DCDC_DATA/0/DCDC_U_BAT" and r["_field"] == "value") \
+                      |> max()'
+        result = query_api.query(query)
+        for table in result:
+            for record in table:
+                max_voltage = round(record.get_value(), 2)
+        print(max_cap, max_voltage, round(max_cap*max_voltage*0.9/1000,2))
+
+    def influx_query(self, parameter, fil, day=None):
+        start_date, end_date = self.date_values_influx(day)
+        query = 'from(bucket: "'+ self.influxbucket +'") \
+                |> range(start:'+start_date+', stop: '+ end_date+') \
+                      |> filter(fn: (r) => r["topic"] == "'+parameter+'" and r["_field"] == "value")'
+        if(fil in ["pos", "neg"]):
+            if(fil=="pos"):
+                query = query + '|> filter(fn: (r) => r["_value"] > 0.0)'
+            else:
+                query = query + '|> filter(fn: (r) => r["_value"] <= 0.0)'
+        query = query + ' |> aggregateWindow( \
+                            every: 1h, \
+                            fn: (tables=<-, column) => \
+                                tables \
+                                    |> integral(unit: 1h) \
+                                    |> map(fn: (r) => ({ r with _value: r._value / 1000.0}))) \
+                      |> aggregateWindow(fn: sum, every: 1mo) '
+        return query
+
+    def update_electrical(self, day=None):
+        client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
+        query_api = client.query_api()
+        parameter = {"VerbrauchStromHaus":{"par":"E3DC/EMS_DATA/EMS_POWER_HOME","filter":None},
+                "PVErtragAc":{"par":"E3DC/EMS_DATA/EMS_POWER_PV","filter":None},
+                "PVErtragDcOst":{"par":"E3DC/PVI_DATA/0/PVI_DC_POWER/0/PVI_VALUE","filter":None},
+                "PVErtragDcWest":{"par":"E3DC/PVI_DATA/0/PVI_DC_POWER/1/PVI_VALUE","filter":None},
+                "Netzbezug":{"par":"E3DC/EMS_DATA/EMS_POWER_GRID","filter":"pos"},
+                "Netzeinspeisung":{"par":"E3DC/EMS_DATA/EMS_POWER_GRID","filter":"neg"},
+                "Batterieladung":{"par":"E3DC/EMS_DATA/EMS_POWER_BAT","filter":"pos"},
+                "Batterieentladung":{"par":"E3DC/EMS_DATA/EMS_POWER_BAT","filter":"neg"}}
+        for key in parameter:
+            result = query_api.query(self.influx_query(parameter[key]["par"], fil=parameter[key]["filter"] , day=day))
+            for table in result:
+                for record in table:
+                    value = round(record.get_value(), 2)
+            start_date, end_date = self.date_values(day)
+            logging.info("Calculating {} of day and writing value to daily table".format(key))
+            self.write_day(start_date, key, value)
 
     def delete_redundancy(self, parameter, day=None):
         logging.debug("Deleting redundant values of {}".format(parameter))
@@ -331,11 +434,15 @@ class Mysqldose(object):
         self.update_pellet_consumption(day=day)
         self.update_heating_energy("VerbrauchHeizungEG", day=day)
         self.update_heating_energy("VerbrauchHeizungDG", day=day)
+        self.update_heating_energy("VerbrauchStromEg", day=day)
+        self.update_heating_energy("VerbrauchStromOg", day=day)
+        self.update_heating_energy("VerbrauchStromAllg", day=day)
         self.delete_redundancy("OekoStorageFill", day=day)
         self.delete_redundancy("OekoStoragePopper", day=day)
         self.delete_redundancy("OekoCiStatus", day=day)
         self.delete_redundancy("OekoPeStatus", day=day)
         self.update_daily_average_temp("OekoAussenTemp", day=day)
+        self.update_electrical(day=day)
 
 if __name__ == "__main__":
     '''
@@ -378,13 +485,15 @@ if __name__ == "__main__":
     if(update):
         dbconn.daily_updates(day)
 
-    start_date = datetime.date(2018,8,11)
-    day_count = 841
-    for single_date in (start_date + datetime.timedelta(n) for n in range(day_count)):
-        print(single_date)
-        dbconn.update_daily_average_temp("OekoAussenTemp", day=single_date)
+    dbconn.influx_query2(day)
 
-    logging.info("Bye.")
+    #start_date = datetime.date(2018,8,11)
+    #day_count = 841
+    #for single_date in (start_date + datetime.timedelta(n) for n in range(day_count)):
+    #    print(single_date)
+    #    dbconn.update_daily_average_temp("OekoAussenTemp", day=single_date)
+
+    #logging.info("Bye.")
 
 
     #dbconn.write('2017-11-12 1:2:3', 'Test', 44.0)
