@@ -337,6 +337,20 @@ class Mysqldose(object):
                 max_voltage = round(record.get_value(), 2)
         print(max_cap, max_voltage, round(max_cap*max_voltage*0.9/1000,2))
 
+    def influx_calc_energy(self, day=None):
+        client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
+        query_api = client.query_api()
+        start_date, end_date = self.date_values_influx(day)
+        print(start_date)
+        return
+        query = 'from(bucket: "'+ self.influxbucket +'") \
+                |> range(start:'+start_date+', stop: '+ end_date+') \
+                      |> filter(fn: (r) => r["topic"] == "E3DC/EMS_DATA/EMS_POWER_HOME" and r["_field"] == "value")'
+        result = query_api.query(query)
+        for table in result:
+            for record in table:
+                print(record)
+
     def influx_query(self, parameter, fil, day=None):
         start_date, end_date = self.date_values_influx(day)
         query = 'from(bucket: "'+ self.influxbucket +'") \
@@ -434,6 +448,7 @@ class Mysqldose(object):
         self.update_pellet_consumption(day=day)
         self.update_heating_energy("VerbrauchHeizungEG", day=day)
         self.update_heating_energy("VerbrauchHeizungDG", day=day)
+        self.update_heating_energy("VerbrauchWW", day=day)
         self.update_heating_energy("VerbrauchStromEg", day=day)
         self.update_heating_energy("VerbrauchStromOg", day=day)
         self.update_heating_energy("VerbrauchStromAllg", day=day)
@@ -485,7 +500,10 @@ if __name__ == "__main__":
     if(update):
         dbconn.daily_updates(day)
 
-    dbconn.influx_query2(day)
+
+    #dbconn.influx_query2(day)
+    dbconn.influx_calc_energy("2022-02-19")
+
 
     #start_date = datetime.date(2018,8,11)
     #day_count = 841
