@@ -47,9 +47,9 @@ def hilf():
     print('')
     print('y  -> Select controller')
     print('c  -> Get Counter Values')
+    print('w  -> Get Counter')
     print('?  -> This Text')
     print('q  -> Quit')
-
 
 def getch():
     import sys, tty, termios
@@ -62,8 +62,19 @@ def getch():
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     return ch
 
-
-
+def get_counter(addr):
+    counters = udpRemote('{"command":"getCounter"}\n', addr=addr, port=5005)
+    try:
+        print("")
+        i = 0
+        counters = counters["Counter"]
+        print(counters)
+        for counter in counters:
+            print(i, " -> ", counter)
+            i += 1
+        return(counters[int(getch())])
+    except:
+        print("Error")
 
 def get_room(addr):
     ret = udpRemote('{"command":"getStatus"}\n', addr=addr, port=5005)
@@ -101,9 +112,12 @@ def get_temp():
 def auswahl():
     print('o -> oben')
     print('u -> unten')
+    print('g -> piesler')
     auswahl =  getch()
     if(auswahl == "o"):
         addr = "fbhdg"
+    elif(auswahl == "g"):
+        addr = "piesler"
     else:
         addr = "heizungeg"
     return(addr)
@@ -158,7 +172,13 @@ def main():
                 elif cmd == "z":
                     json_string = '{"command" : "reloadTimer"}'
                 elif cmd == "c":
-                    json_string = '{"command" : "getCounterValues"}'
+                    counter = get_counter(addr)
+                    try:
+                        json_string = '{"command" : "getCounterValues", "Counter" : "' + counter + '"}'
+                    except Exception as e:
+                        print("Falsch!")
+                elif cmd == "w":
+                    json_string = '{"command" : "getCounter"}'
                 elif cmd == "p":
                     room = get_room(addr)
                     mode = get_mode()
