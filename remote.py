@@ -8,7 +8,7 @@ import json
 import select
 import logging
 
-ADDR = "heizungeg.local"
+ADDR = "heizungeg"
 PORT = 5005
 udpTimeout = 4
 
@@ -60,7 +60,7 @@ def udpRemote(msg, **kwargs):
 
 if __name__ == "__main__":
     json_string = '{"command" : "getAlive"}'
-    answer = udpRemote(json_string, addr="heizungeg.local", port=5005)
+    answer = udpRemote(json_string, addr="heizungeg", port=5005)
     print(answer)
     print(type(answer))
     pass
