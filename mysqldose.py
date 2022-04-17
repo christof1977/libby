@@ -24,7 +24,10 @@ class Mysqldose(object):
     class provides methods for daily maintenance and caluclations.
     '''
     def __init__(self, mysqluser, mysqlpass, mysqlserv, mysqldb):
-        pass
+        self.mysqluser = mysqluser
+        self.mysqlpass = mysqlpass
+        self.mysqlserv = mysqlserv
+        self.mysqldb = mysqldb
 
     def read_one(self, parameter, dt = None):
         '''
