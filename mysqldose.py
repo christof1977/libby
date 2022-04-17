@@ -9,13 +9,18 @@ import pymysql
 import time
 import datetime
 import numpy as np
-import datevalues
 from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
 
 import logging
 logging.basicConfig(level=logging.INFO)
 #logging.basicConfig(level=logging.DEBUG)
+
+try:
+    import datevalues
+except ImportError:
+    import sys
+    from . import datevalues
 
 configfile = "collectdata.ini"
 realpath = os.path.realpath(__file__)
