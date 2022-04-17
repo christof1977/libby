@@ -9,6 +9,7 @@ import pymysql
 import time
 import datetime
 import numpy as np
+import datevalues
 from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
 
@@ -227,35 +228,6 @@ class Mysqldose(object):
             logging.debug("Closing connection to DB")
             con.close()
 
-    def date_values(self, day=None):
-        '''
-        Returns a datetime object for given day or today with time 00:00:00 as
-        start_date and time 23:59:50 as end_date
-        '''
-        if(day is None):
-            start_date = datetime.datetime.combine(datetime.date.today(), datetime.datetime.min.time())
-        elif(isinstance(day, datetime.date)):
-            start_date = datetime.datetime.combine(day, datetime.datetime.min.time())
-        else:
-            try:
-                start_date = datetime.datetime.strptime(day, "%Y-%m-%d")
-            except:
-                logging.error("Not a valid date")
-                return(-1)
-        end_date = start_date + datetime.timedelta(hours=23, minutes=59, seconds=59)
-        return(start_date, end_date)
-
-    def date_values_influx(self, day=None):
-        '''
-        Returns a datetime string for given day or today with time 00:00:00 as
-        start_date and time 23:59:50 as end_date in format 2021-12-12T00:00:00Z
-        for use with influxdb
-        '''
-        start_date, end_date = self.date_values(day)
-        start_date = start_date.strftime("%Y-%m-%dT%H:%M:%SZ")
-        end_date = end_date.strftime("%Y-%m-%dT%H:%M:%SZ")
-        return(start_date, end_date)
-
     def update_solar_gain(self, day=None):
         '''
         This function reads the solar gain of a given day out of the
@@ -263,7 +235,7 @@ class Mysqldose(object):
         If no day is given, today is chosen.
         '''
         logging.info("Calculating solar gain and writing value to daily table")
-        start_date, end_date = self.date_values(day)
+        start_date, end_date = datevalues.date_values(day)
         res = self.read_day(start_date, "OekoKollLeistung")
         pwr = []
         for line in res:
@@ -281,7 +253,7 @@ class Mysqldose(object):
         If no day is given, today is chosen.
         '''
         logging.info("Calculating pellet consumption and writing value to daily table")
-        start_date, end_date = self.date_values(day)
+        start_date, end_date = datevalues.date_values(day)
         res = self.read_day(start_date, "OekoStoragePopper")
         val = [0]
         for line in res:
@@ -305,7 +277,7 @@ class Mysqldose(object):
         power consuption of this day. The values is stored in the daily table.
         '''
         logging.info("Getting consumed heating energy of day and  writing value to daily table")
-        start_date, end_date = self.date_values(day)
+        start_date, end_date = datevalues.date_values(day)
         try:
             con_today  = self.read_day(start_date, parameter)[0][2]
             yesterday = start_date - datetime.timedelta(1)
@@ -318,7 +290,7 @@ class Mysqldose(object):
     def influx_query2(self, day=None):
         client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
         query_api = client.query_api()
-        start_date, end_date = self.date_values_influx(day)
+        start_date, end_date = datevalues.date_values_influx(day)
         query = 'from(bucket: "'+ self.influxbucket +'") \
                 |> range(start:'+start_date+', stop: '+ end_date+') \
                       |> filter(fn: (r) => r["topic"] == "E3DC/BAT_DATA/0/BAT_USABLE_CAPACITY" and r["_field"] == "value") \
@@ -340,7 +312,7 @@ class Mysqldose(object):
     def influx_calc_energy(self, day=None):
         client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
         query_api = client.query_api()
-        start_date, end_date = self.date_values_influx(day)
+        start_date, end_date = datevalues.date_values_influx(day)
         print(start_date)
         return
         query = 'from(bucket: "'+ self.influxbucket +'") \
@@ -352,7 +324,7 @@ class Mysqldose(object):
                 print(record)
 
     def influx_query(self, parameter, fil, day=None):
-        start_date, end_date = self.date_values_influx(day)
+        start_date, end_date = datevalues.date_values_influx(day)
         query = 'from(bucket: "'+ self.influxbucket +'") \
                 |> range(start:'+start_date+', stop: '+ end_date+') \
                       |> filter(fn: (r) => r["topic"] == "'+parameter+'" and r["_field"] == "value")'
@@ -386,13 +358,13 @@ class Mysqldose(object):
             for table in result:
                 for record in table:
                     value = round(record.get_value(), 2)
-            start_date, end_date = self.date_values(day)
+            start_date, end_date = datevalues.date_values(day)
             logging.info("Calculating {} of day and writing value to daily table".format(key))
             self.write_day(start_date, key, value)
 
     def delete_redundancy(self, parameter, day=None):
         logging.debug("Deleting redundant values of {}".format(parameter))
-        start_date, end_date = self.date_values(day)
+        start_date, end_date = datevalues.date_values(day)
         res = self.read_day(start_date, parameter)
         value = 0
         idx_del = []
@@ -424,7 +396,7 @@ class Mysqldose(object):
         calculates the mean value and stores it in the daily database.
         '''
         logging.info("Calculation mean temperature and writing value to daily table")
-        start_date, end_date = self.date_values(day)
+        start_date, end_date = datevalues.date_values(day)
         try:
             mean_temp = self.get_mean(parameter, start_date)
             self.write_day(start_date, parameter, mean_temp)
@@ -433,7 +405,7 @@ class Mysqldose(object):
 
     def get_mean(self, parameter, day=None):
         logging.debug("Calculation average for {}".format(parameter))
-        start_date, end_date = self.date_values(day)
+        start_date, end_date = datevalues.date_values(day)
         res = self.read_day(start_date, parameter)
         res = np.array(res)
         return(round(np.mean(res[:,2]),2))
