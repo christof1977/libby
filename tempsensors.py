@@ -34,8 +34,13 @@ class onewires():
             fhd.close()
 
             # Temperaturwerte auslesen und konvertieren
-            stringvalue = filecontent.split("\n")[1].split(" ")[9]
-            return (float(stringvalue[2:]) / 1000)
+            try:
+                stringvalue = filecontent.split("\n")[1].split(" ")[9]
+                ret = float(stringvalue[2:]) / 1000
+            except Exception as e:
+                ret = 150
+            return ret
+
 
         temperature = _get_value(w1_slave)
 
