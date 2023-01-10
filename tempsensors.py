@@ -52,6 +52,7 @@ class onewires():
                 # Temperaturwert für nächstes Runde speichern
                 self.old_values[str(w1_slave)] = temperature
             else:
+                logger.info("Alter Wert: " + self.old_values[str(w1_slave)] + "°C")
                 logger.info("NICHT Innerhalb +/- 5 Grad: " + str(temperature) + "°C")
                 temperature = _get_value(w1_slave)
         except:
