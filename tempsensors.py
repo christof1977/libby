@@ -6,7 +6,8 @@
 import logging
 
 
-logger = logging.getLogger(__name__)
+#logger = logging.getLogger(__name__)
+logger = logging.getLogger("Tempsensors")
 #logger.setLevel(logging.DEBUG)
 logger.setLevel(logging.INFO)
 
@@ -16,6 +17,7 @@ logger.setLevel(logging.INFO)
 class onewires():
 
     def __init__(self):
+        logger.info("Starting Tempsensors")
         self.old_values = {}
 
     def enumerate(self):
@@ -38,10 +40,9 @@ class onewires():
                 stringvalue = filecontent.split("\n")[1].split(" ")[9]
                 ret = float(stringvalue[2:]) / 1000
             except Exception as e:
+                logger.warning("Fehler beim Lesen des W1-Sensors")
                 ret = 150
             return ret
-
-
         temperature = _get_value(w1_slave)
 
         try:
@@ -49,15 +50,18 @@ class onewires():
             # Wenn die Abweichung größer 5°C ist, gehen wir mal davon aus, dass der ausgelesene Wert falsch ist
             # und lesen ihe einfach nochmal aus, so oft bis die Abweichung kleiner 5°C ist.
             if(abs(temperature-self.old_values[str(w1_slave)]) <= 5):
+                diff = abs(temperature-self.old_values[str(w1_slave)])
                 # Temperaturwert für nächstes Runde speichern
                 self.old_values[str(w1_slave)] = temperature
+                logger.debug("Temperaturdifferenz war ok: " + str(diff))
             else:
-                logger.info("Alter Wert: " + self.old_values[str(w1_slave)] + "°C")
-                logger.info("NICHT Innerhalb +/- 5 Grad: " + str(temperature) + "°C")
+                logger.warning("Alter Wert: " + str(self.old_values[str(w1_slave)]) + "°C")
+                logger.warning("NICHT Innerhalb +/- 5 Grad: " + str(temperature) + "°C")
                 temperature = _get_value(w1_slave)
         except:
             # Hier geht's rein, wenn der für den Sensor nooch kein alter Wert existiert
             # Temperaturwert für nächstes Runde speichern
+            logger.warning("Noch kein alter Wert vorhanden")
             self.old_values[str(w1_slave)] = temperature
         # Temperatur ausgeben
         return temperature
