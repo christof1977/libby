@@ -4,6 +4,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import time
 
 
 #logger = logging.getLogger(__name__)
@@ -49,14 +50,17 @@ class onewires():
             # Wenn bereits ein vorhergehender Wert für diesen Sensor gespeichert ist, wird alt und neu verglichen.
             # Wenn die Abweichung größer 5°C ist, gehen wir mal davon aus, dass der ausgelesene Wert falsch ist
             # und lesen ihe einfach nochmal aus, so oft bis die Abweichung kleiner 5°C ist.
-            if(abs(temperature-self.old_values[str(w1_slave)]) <= 5):
-                diff = abs(temperature-self.old_values[str(w1_slave)])
+            #if(abs(temperature-self.old_values[str(w1_slave)]) <= 5):
+            if(abs(temperature > 40)):
+                #diff = abs(temperature-self.old_values[str(w1_slave)])
                 # Temperaturwert für nächstes Runde speichern
-                self.old_values[str(w1_slave)] = temperature
-                logger.debug("Temperaturdifferenz war ok: " + str(diff))
-            else:
-                logger.warning("Alter Wert: " + str(self.old_values[str(w1_slave)]) + "°C")
-                logger.warning("NICHT Innerhalb +/- 5 Grad: " + str(temperature) + "°C")
+                #self.old_values[str(w1_slave)] = temperature
+                #logger.debug("Temperaturdifferenz war ok: " + str(diff))
+            #else:
+                #logger.warning("Alter Wert: " + str(self.old_values[str(w1_slave)]) + "°C")
+                #logger.warning("NICHT Innerhalb +/- 5 Grad: " + str(temperature) + "°C")
+                logger.warning("Messwert <-40°C oder >40°C -> unrealistisch -> Messfehler -> nochmal messen")
+                time.sleep(1)
                 temperature = _get_value(w1_slave)
         except:
             # Hier geht's rein, wenn der für den Sensor nooch kein alter Wert existiert
