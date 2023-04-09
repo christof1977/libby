@@ -7,7 +7,7 @@ import sys
 import json
 import select
 import logging
-from remote import udpRemote
+from .remote import udpRemote
 
 
 logging.basicConfig(level=logging.INFO)
