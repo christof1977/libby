@@ -165,6 +165,9 @@ class Mysqldose(object):
             con.close()
 
     def read_daily_row(self, day):
+        '''
+        Funrction returns the daily entry for a given day as dict with column names as keys. 
+        '''
         con = pymysql.connect(user=self.mysqluser, passwd=self.mysqlpass,host=self.mysqlserv,db=self.mysqldb)
         try:
             with con.cursor(pymysql.cursors.DictCursor) as cur:
