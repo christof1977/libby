@@ -164,6 +164,22 @@ class Mysqldose(object):
             logging.debug("Closing connection to DB")
             con.close()
 
+    def read_daily_row(self, day):
+        con = pymysql.connect(user=self.mysqluser, passwd=self.mysqlpass,host=self.mysqlserv,db=self.mysqldb)
+        try:
+            with con.cursor(pymysql.cursors.DictCursor) as cur:
+                query = 'SELECT * FROM daily \
+                        WHERE day = %s'
+                cur.execute(query, (day, ))
+                res = cur.fetchall()[0]
+        except Exception as e:
+            logging.error("Error while reading from DB: "+str(e))
+        finally:
+            logging.debug("Closing connection to DB")
+            con.close()
+        return(res)
+
+
     def read_day(self, day, parameter):
         '''
         This function reads all values of parameter for a given day in as  date
